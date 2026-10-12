@@ -1,0 +1,241 @@
+/* fx.css: styles for the optional effects (assets/fx/*.js).
+   Anything that moves is written as  :root[data-anim="on"] …  so the ✨ "Animations" switch (or the system's
+   "reduce motion" setting) turns it all off. Static looks (cards, chips, menus) always apply. */
+
+  /* one shared "soft" easing for everything: quick start, long gentle settle */
+  :root[data-anim="on"] .d-in { animation: d-fade .45s cubic-bezier(.22,1,.36,1); }
+  :root[data-anim="on"] .d-in-r { animation: d-from-r .5s cubic-bezier(.22,1,.36,1); }
+  :root[data-anim="on"] .d-in-l { animation: d-from-l .5s cubic-bezier(.22,1,.36,1); }
+  @keyframes d-from-r { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+  @keyframes d-from-l { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+  @keyframes d-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* squish: a small press-in that eases back out (no bouncy overshoot) */
+  :root[data-anim="on"] .btn, :root[data-anim="on"] .icon-btn, :root[data-anim="on"] .gsearch-btn, :root[data-anim="on"] .d-top { transition: transform .3s cubic-bezier(.22,1,.36,1), translate .6s cubic-bezier(.22,1,.36,1), background .25s, border-color .25s, color .25s, filter .25s; }
+  :root[data-anim="on"] .btn:active, :root[data-anim="on"] .gsearch-btn:active { transform: scale(.97); transition-duration: .12s; }
+  :root[data-anim="on"] .icon-btn:active, :root[data-anim="on"] .d-top:active { transform: scale(.93); transition-duration: .12s; }
+
+  /* hover lift on cards you can click */
+  :root[data-anim="on"] a.card { transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease, border-color .35s; }
+  :root[data-anim="on"] a.card:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,.07); border-color: var(--accent); }
+  :root[data-anim="on"] .table-wrap tbody tr { transition: background .25s; }
+
+  /* copy pop, logo wiggle, barrel roll */
+  :root[data-anim="on"] .d-pop { animation: d-pop .5s cubic-bezier(.22,1,.36,1); }
+  @keyframes d-pop { 0% { transform: scale(1); } 35% { transform: scale(1.06); } 100% { transform: scale(1); } }
+  :root[data-anim="on"] .d-wiggle { animation: d-wiggle .6s cubic-bezier(.22,1,.36,1); }
+  @keyframes d-wiggle { 30% { transform: rotate(-8deg) scale(1.06); } 65% { transform: rotate(5deg) scale(1.04); } }
+  :root[data-anim="on"] .d-roll { animation: d-roll 1.2s cubic-bezier(.65,0,.35,1); }
+  @keyframes d-roll { to { transform: rotate(360deg); } }
+.table-wrap tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+
+/* a category at 100% gets a rainbow bar 🌈 */
+.bar > span[style*="width:100%"] { background: linear-gradient(90deg, #ff6b6b, #ffb347, #ffe66d, #4cc38a, #6b9bff, #b388ff); background-size: 200% 100%; }
+:root[data-anim="on"] .bar > span[style*="width:100%"] { animation: d-rainbow 4s linear infinite; }
+:root[data-anim="on"].d-loading .bar > span[style*="width:100%"] { animation: d-rainbow 4s linear infinite, d-barfill 1.2s cubic-bezier(.22,1,.36,1) both; }
+@keyframes d-rainbow { to { background-position: 200% 0; } }
+
+/* click ripple + confetti */
+.d-confetti { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 200; border-radius: 1.5px; will-change: transform, opacity; }
+
+/* back to top */
+.d-top { position: fixed; right: 1.1rem; bottom: 1.1rem; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--border); background: var(--panel); color: var(--text);
+  box-shadow: 0 6px 18px rgba(0,0,0,.15); cursor: pointer; font-size: var(--fs-lg); z-index: 60; opacity: 0; pointer-events: none; transition: opacity .4s ease, transform .3s; }
+.d-top.show { opacity: 1; pointer-events: auto; }
+.d-top:hover { border-color: var(--accent); color: var(--accent); }
+
+/* resume chip */
+.d-resume { position: fixed; left: 1.1rem; bottom: 1.1rem; z-index: 60; display: flex; align-items: center; gap: .4rem; max-width: min(420px, calc(100vw - 6rem));
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-pill); box-shadow: 0 6px 18px rgba(0,0,0,.15); padding: .3rem .4rem .3rem .9rem; font-size: var(--fs-sm);
+  overflow: hidden; white-space: nowrap; transition: max-width .55s cubic-bezier(.22,1,.36,1), padding .45s cubic-bezier(.22,1,.36,1); }
+/* after a few seconds (or once you scroll) it tucks into a small ↩ bubble so it never covers the page; hover to open it */
+.d-resume.mini { max-width: 42px; padding: .3rem .4rem .3rem .82rem; }
+.d-resume.mini:hover, .d-resume.mini:focus-within { max-width: min(420px, calc(100vw - 6rem)); padding: .3rem .4rem .3rem .9rem; }
+.d-resume > span { flex: none; }
+.d-resume a { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d-resume a b { color: var(--accent); }
+.d-resume button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: var(--fs-base); padding: 0 .35rem; }
+:root[data-anim="on"] .d-resume { animation: d-fade .6s cubic-bezier(.22,1,.36,1); }
+
+/* shortcuts sheet */
+.d-sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 300; display: grid; place-items: center; padding: 1rem; }
+.d-sheet { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-md); padding: 1.2rem 1.4rem; width: min(420px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.d-sheet h3 { margin: 0 0 .7rem; }
+.d-sheet table { width: 100%; border-collapse: collapse; font-size: var(--fs-md); }
+.d-sheet td { padding: .3rem 0; border: 0; }
+.d-sheet td:first-child { width: 6.5rem; }
+.d-sheet kbd { display: inline-block; min-width: 1.6rem; text-align: center; padding: .05rem .4rem; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--r-sm); font: 600 var(--fs-xs) var(--mono); background: var(--panel-2); }
+:root[data-anim="on"] .d-sheet { animation: d-fade .35s cubic-bezier(.22,1,.36,1); }
+/* glow cursor */
+/* --gc: the cursor colour. It's the page's colour, tinting toward whatever you hover (green on Solved, amber on
+   Bookmark…). Registered so it can fade smoothly between colours. */
+@property --gc { syntax: "<color>"; inherits: true; initial-value: #4f7cff; }
+:root { transition: --gc .6s ease; }
+.d-glow { position: fixed; left: 0; top: 0; width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%; pointer-events: none; z-index: 250;
+  background: radial-gradient(circle, color-mix(in srgb, var(--gc) 22%, transparent) 0%, color-mix(in srgb, var(--gc) 8%, transparent) 42%, transparent 70%);
+  opacity: 0; transition: opacity .6s ease; will-change: transform; }
+.d-glow.on { opacity: 1; }
+.d-glow.on.rest { opacity: .18; transition: opacity 1.4s ease; }
+[data-theme="dark"] .d-glow { background: radial-gradient(circle, color-mix(in srgb, var(--gc) 30%, transparent) 0%, color-mix(in srgb, var(--gc) 11%, transparent) 42%, transparent 70%); }
+/* click bloom: a soft filled circle in the colour of what you clicked */
+.d-bloom { position: fixed; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; pointer-events: none; z-index: 200; }
+/* glow on: the border of the card under the cursor lights up softly near it */
+.d-spot { position: relative; }
+.d-spot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: radial-gradient(200px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--gc) 80%, transparent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: d-spot-in .45s ease both; }
+@keyframes d-spot-in { from { opacity: 0; } }
+
+/* ✨ settings menu */
+.d-menu-wrap { position: relative; }
+.d-menu { position: absolute; right: 0; top: calc(100% + 8px); width: 270px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-md);
+  box-shadow: 0 14px 36px rgba(0,0,0,.16); padding: .4rem; z-index: 120; }
+:root[data-anim="on"] .d-menu:not([hidden]) { animation: d-fade .3s cubic-bezier(.22,1,.36,1); }
+.d-row { display: flex; align-items: center; gap: .7rem; padding: .55rem .6rem; border-radius: var(--r-sm); cursor: pointer; }
+.d-row:hover { background: var(--panel-2); }
+.d-row > span { flex: 1; display: flex; flex-direction: column; line-height: 1.25; }
+.d-row b { font-size: var(--fs-sm); } .d-row small { color: var(--muted); font-size: var(--fs-xs); }
+.d-row.dim { opacity: .5; cursor: default; }
+.d-row input { position: absolute; opacity: 0; pointer-events: none; }
+.d-sw { flex: none; width: 34px; height: 20px; border-radius: var(--r-pill); position: relative; overflow: hidden;
+  background: var(--border) linear-gradient(var(--accent), var(--accent)) no-repeat left center / 0% 100%; transition: background-size .55s cubic-bezier(.3,.6,.3,1); }
+.d-sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: var(--r-pill); background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.d-row input:checked + .d-sw { background-size: 100% 100%; }
+.d-sw::after { z-index: 1; }
+.d-row input:checked + .d-sw::after { transform: translateX(14px); }
+/* the knob stretches only when you flip a switch (class "kick"), not every time the menu opens */
+:root[data-anim="on"] .d-row input:checked + .d-sw.kick::after { animation: d-knob-r .5s cubic-bezier(.22,1,.36,1); }
+:root[data-anim="on"] .d-row input:not(:checked) + .d-sw.kick::after { animation: d-knob-l .5s cubic-bezier(.22,1,.36,1); }
+.d-menu[hidden] .d-sw, .d-menu-wrap:not(.seen) .d-sw { transition: none; }
+@keyframes d-knob-r { 0% { transform: translateX(0); width: 16px; } 45% { transform: translateX(0); width: 26px; } 100% { transform: translateX(14px); width: 16px; } }
+@keyframes d-knob-l { 0% { transform: translateX(14px); width: 16px; } 45% { transform: translateX(4px); width: 26px; } 100% { transform: translateX(0); width: 16px; } }
+.d-row input:focus-visible + .d-sw { box-shadow: 0 0 0 3px var(--accent-soft); }
+.d-hint { padding: .45rem .6rem .25rem; border-top: 1px solid var(--border); margin-top: .3rem; }
+.d-hint kbd { padding: 0 .35rem; border: 1px solid var(--border); border-radius: var(--r-xs); font: 600 var(--fs-xs) var(--mono); }
+/* gliding sidebar bar (replaces the per-item bar from style.css) */
+.sidebar.has-ind a.item::before { display: none; }
+.sb-ind { position: absolute; left: 0; top: 0; width: 3px; border-radius: var(--r-pill); background: var(--accent); pointer-events: none; z-index: 2; opacity: 0;
+  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--accent) 50%, transparent); }
+/* hover preview card beside the sidebar */
+.sb-peek { position: fixed; z-index: 140; width: 260px; padding: .65rem .8rem; border-radius: var(--r-md); background: var(--panel); border: 1px solid var(--border);
+  box-shadow: 0 12px 30px rgba(0,0,0,.14); pointer-events: none; opacity: 0; transform: translateX(-6px); transition: opacity .3s ease, transform .35s cubic-bezier(.22,1,.36,1); }
+.sb-peek.show { opacity: 1; transform: none; }
+.sb-peek .pk-t { font-weight: 600; font-size: var(--fs-md); }
+.sb-peek .pk-d { font-size: var(--fs-xs); color: var(--muted); margin-top: .25rem; line-height: 1.4; }
+.sb-peek .pk-m { font-size: var(--fs-xs); color: var(--muted); margin-top: .4rem; display: flex; gap: .7rem; }
+.sb-ind.glide { transition: transform .55s cubic-bezier(.22,1,.36,1), height .55s cubic-bezier(.22,1,.36,1), opacity .3s; }
+:root[data-anim="on"] .sidebar a.item.active.sb-new { animation: sb-tint .6s ease both; }
+
+/* ---- header icons: a small motion on hover (base icon styles live in style.css) ---- */
+:root[data-anim="on"] .nav a:hover .ni-hop { animation: ni-hop .55s cubic-bezier(.22,1,.36,1); }
+:root[data-anim="on"] .nav a:hover .ni-tilt { animation: ni-tilt .6s cubic-bezier(.22,1,.36,1); }
+:root[data-anim="on"] .nav a:hover .ni-wiggle { animation: ni-wiggle .6s ease; }
+:root[data-anim="on"] .nav a:hover .ni-spin { animation: ni-spin .7s cubic-bezier(.45,0,.2,1); }
+:root[data-anim="on"] .nav a:hover .ni-sway { animation: ni-sway .8s ease-in-out; }
+:root[data-anim="on"] .nav a:hover .ni-grow path.b { animation: ni-grow .55s cubic-bezier(.22,1,.36,1) both; }
+:root[data-anim="on"] .nav a:hover .ni-grow path.b:nth-of-type(2) { animation-delay: .07s; } :root[data-anim="on"] .nav a:hover .ni-grow path.b:nth-of-type(3) { animation-delay: .14s; }
+:root[data-anim="on"] .nav a:hover .ni-blink .cur { animation: ni-blink .9s steps(1) 2; }
+.ni-grow path.b { transform-box: fill-box; transform-origin: bottom; }
+@keyframes ni-hop { 40% { transform: translateY(-3px); } 70% { transform: translateY(.5px); } }
+@keyframes ni-tilt { 40% { transform: rotate(-12deg); } 75% { transform: rotate(4deg); } }
+@keyframes ni-wiggle { 25% { transform: rotate(-10deg); } 55% { transform: rotate(8deg); } 80% { transform: rotate(-3deg); } }
+@keyframes ni-spin { to { transform: rotate(360deg); } }
+@keyframes ni-sway { 25% { transform: translateX(-1.5px) rotate(-6deg); } 75% { transform: translateX(1.5px) rotate(6deg); } }
+@keyframes ni-grow { from { transform: scaleY(.3); } }
+@keyframes ni-blink { 50% { opacity: 0; } }
+/* theme button hover: the rays turn / the moon tilts (the sun ↔ moon morph itself lives in style.css) */
+#themeBtn .tm-rays { transform-origin: 12px 12px; }
+:root[data-anim="on"] #themeBtn:hover .tm-rays { animation: ni-spin 1.4s cubic-bezier(.45,0,.2,1); }
+:root[data-anim="on"] [data-theme="dark"] #themeBtn:hover .tm-body { animation: d-moon-tilt .9s cubic-bezier(.22,1,.36,1); }
+@keyframes d-moon-tilt { 40% { transform: scale(1.5) rotate(-40deg); } }
+.d-star { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 300; font-size: 11px; line-height: 1; }
+
+/* ---- header: a pill that glides calmly behind the active / hovered link ---- */
+.nav-pill { position: absolute; left: 0; top: 0; border-radius: var(--r-sm); pointer-events: none; z-index: 0; opacity: 0; overflow: hidden;
+  background-color: color-mix(in srgb, var(--pc, var(--accent)) 14%, var(--panel)); }
+:root[data-anim="on"] .nav-pill.ready { transition: transform .55s cubic-bezier(.22,1,.36,1), width .55s cubic-bezier(.22,1,.36,1), opacity .35s, background-color .55s ease; }
+
+/* ---- page change: content dissolves out, new page's blocks rise into focus ---- */
+:root[data-anim="on"] #content.d-leave { opacity: 0; filter: blur(6px); transform: translateY(-4px) scale(.995); transition: opacity .2s ease-in, filter .2s ease-in, transform .2s ease-in; }
+
+/* ---- soft day ↔ night: the old look softly blurs while the new one fades in on top ---- */
+html.d-soft::view-transition-old(root) { animation: d-vt-old .7s cubic-bezier(.4,0,.2,1) both; mix-blend-mode: normal; }
+html.d-soft::view-transition-new(root) { animation: d-vt-new .7s cubic-bezier(.4,0,.2,1) both; mix-blend-mode: normal; }
+@keyframes d-vt-old { to { filter: blur(2px); } }
+@keyframes d-vt-new { from { opacity: 0; filter: blur(2px); } to { opacity: 1; filter: blur(0); } }
+
+/* ---- liquid fill ("pour"): a wavy front edge, little rising bubbles, a shine when full; drains when undone ---- */
+.d-liquid { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--liq); }
+.d-liquid::after { content: ""; position: absolute; top: 0; right: -9px; width: 10px; height: 200%; background: var(--liq);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='20'%3E%3Cpath d='M0 0H5Q10 5 5 10Q0 15 5 20H0Z'/%3E%3C/svg%3E") 0 0 / 10px 20px repeat-y; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='20'%3E%3Cpath d='M0 0H5Q10 5 5 10Q0 15 5 20H0Z'/%3E%3C/svg%3E") 0 0 / 10px 20px repeat-y; animation: d-wave-y .9s linear infinite; }
+@keyframes d-wave-y { to { transform: translateY(-20px); } }
+.d-liquid i { position: absolute; bottom: -6px; width: 5px; height: 5px; border-radius: 50%; background: color-mix(in srgb, var(--liq-edge) 25%, transparent); opacity: 0; animation: d-bubble 1.1s cubic-bezier(.3,.6,.4,1) forwards; }
+.d-liquid i:nth-child(1) { right: 22%; animation-delay: .25s; } .d-liquid i:nth-child(2) { right: 48%; width: 4px; height: 4px; animation-delay: .45s; } .d-liquid i:nth-child(3) { right: 70%; width: 3px; height: 3px; animation-delay: .6s; }
+@keyframes d-bubble { 0% { opacity: 0; transform: translateY(0) scale(.5); } 25% { opacity: .9; } 100% { opacity: 0; transform: translateY(-28px) scale(1.1); } }
+.d-shine { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.22) 50%, transparent 70%); transform: translateX(-100%); }
+/* round "glass" (NeetCode list circles): a rotating rounded square rising inside gives a wavy water surface */
+.d-cup { position: absolute; left: -50%; width: 200%; height: 200%; border-radius: 42%; background: var(--cup); z-index: -1; pointer-events: none; animation: ni-spin 4s linear infinite; }
+
+/* ---- water-like progress bars: fill up on page open + a slow sheen ---- */
+:root[data-anim="on"].d-loading .bar > span { animation: d-barfill 1.2s cubic-bezier(.22,1,.36,1) both; transform-origin: left; }
+@keyframes d-barfill { from { transform: scaleX(0); } }
+.bar > span { position: relative; overflow: hidden; }
+:root[data-anim="on"] .bar > span::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 25%, rgba(255,255,255,.32) 45%, transparent 62%); background-size: 260% 100%; animation: d-sheen 4.5s ease-in-out infinite; }
+@keyframes d-sheen { from { background-position: 160% 0; } to { background-position: -110% 0; } }
+
+/* ---- aurora: a fixed full-screen layer behind everything (glows softly through the frosted header) ---- */
+.d-aurora { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; transition: opacity .6s; }
+.d-aurora[hidden] { display: none; }
+.d-aurora.faint { opacity: .5; }
+.d-aurora i { position: absolute; width: 62vw; height: 62vw; border-radius: 50%; filter: blur(110px); opacity: .13; }
+.d-aurora i:nth-child(1) { background: var(--accent); left: -18vw; top: -24vw; }
+.d-aurora i:nth-child(2) { background: var(--purple); left: 40vw; top: 18vh; opacity: .09; }
+.d-aurora i:nth-child(3) { background: var(--green); right: -22vw; bottom: -30vw; opacity: .08; }
+[data-theme="dark"] .d-aurora i { opacity: .2; } [data-theme="dark"] .d-aurora i:nth-child(2) { opacity: .15; } [data-theme="dark"] .d-aurora i:nth-child(3) { opacity: .12; }
+:root[data-anim="on"] .d-aurora i:nth-child(1) { animation: d-drift1 36s ease-in-out infinite alternate; }
+:root[data-anim="on"] .d-aurora i:nth-child(2) { animation: d-drift2 42s ease-in-out infinite alternate; }
+:root[data-anim="on"] .d-aurora i:nth-child(3) { animation: d-drift3 39s ease-in-out infinite alternate; }
+@keyframes d-drift1 { to { transform: translate(14vw, 10vh) scale(1.12); } }
+@keyframes d-drift2 { to { transform: translate(-16vw, 12vh) scale(.9); } }
+@keyframes d-drift3 { to { transform: translate(-10vw, -14vh) scale(1.15); } }
+.nav.has-pill a, .nav.has-pill a:hover, .nav.has-pill a.active { background: transparent; }
+.nav.has-pill a:hover { color: var(--text); }
+/* a soft light sweeps across the pill once when it arrives */
+:root[data-anim="on"] .nav-pill.shine::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.45) 50%, transparent 70%); animation: pill-shine .9s cubic-bezier(.4,0,.2,1) both; }
+[data-theme="dark"] .nav-pill.shine::after { background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.12) 50%, transparent 70%); }
+@keyframes pill-shine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+/* logo "breathes" softly while you're idle */
+:root[data-anim="on"] .logo-wrap.breathe .logo { animation: logo-breathe 3.2s ease-in-out infinite alternate; }
+@keyframes logo-breathe { to { transform: scale(1.06); } }
+/* peek cards under header links */
+.nav-peek { position: fixed; z-index: 140; min-width: 190px; max-width: 280px; padding: .55rem .75rem .6rem .9rem; border-radius: var(--r-md); background: var(--panel);
+  border: 1px solid var(--border); box-shadow: 0 12px 30px rgba(0,0,0,.14); pointer-events: none; opacity: 0; transform: translateY(-4px);
+  transition: opacity .3s ease, transform .35s cubic-bezier(.22,1,.36,1); }
+.nav-peek::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: var(--r-pill); background: var(--c, var(--accent)); }
+.nav-peek.show { opacity: 1; transform: none; }
+.nav-peek .pk-k { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; }
+.nav-peek .pk-t { font-weight: 600; font-size: var(--fs-md); margin-top: .1rem; }
+.nav-peek .pk-s { font-size: var(--fs-xs); color: var(--muted); margin-top: .15rem; }
+/* streak number rolls up */
+.d-streak .sn { display: inline-block; min-width: .6em; }
+:root[data-anim="on"] .d-streak.flick .f { animation: d-flicker .9s ease-in-out; }
+.d-streak.pop-in { animation: hello-in .6s cubic-bezier(.22,1,.36,1) both; }
+/* December: a few slow snowflakes drift through the header */
+.h-snow { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.h-snow i { position: absolute; top: -8px; color: #fff; opacity: .75; font-size: 9px; font-style: normal; animation: h-snow linear infinite; }
+[data-theme="light"] .h-snow i, :root:not([data-theme]) .h-snow i { color: #9cc3ff; }
+@keyframes h-snow { to { transform: translate(14px, 70px) rotate(180deg); } }
+
+/* ---- header: due badge pulse, streak flicker, logo shine ---- */
+:root[data-anim="on"] .nav-badge.pulse { animation: nb-pulse 1.6s cubic-bezier(.22,1,.36,1) .4s 1; }
+@keyframes nb-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--purple) 55%, transparent); } 100% { box-shadow: 0 0 0 9px transparent; } }
+:root[data-anim="on"] .d-streak:hover .f { animation: d-flicker .9s ease-in-out; }
+@keyframes d-flicker { 20% { transform: scale(1.12) rotate(-5deg); } 45% { transform: scale(.95) rotate(4deg); } 70% { transform: scale(1.08) rotate(-2deg); } }
+.brand .logo { position: relative; overflow: hidden; }
+.brand .logo::after { content: ""; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%); transform: translateX(-110%); }
+:root[data-anim="on"] .brand:hover .logo::after { transform: translateX(110%); transition: transform .9s cubic-bezier(.22,1,.36,1); }
+.topbar.scrolled { background: color-mix(in srgb, var(--panel) 72%, transparent); backdrop-filter: blur(14px) saturate(1.5); box-shadow: 0 4px 18px rgba(0,0,0,.06); }
+
+.d-theme-fade, .d-theme-fade * { transition: background-color .45s ease, color .45s ease, border-color .45s ease, fill .45s ease !important; }
+@media print { .d-top, .d-resume, .d-glow { display: none !important; } }
