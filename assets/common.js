@@ -771,35 +771,46 @@
       window.addEventListener("scroll", () => !menu.hidden && open(false), { passive: true });
     });
   }
-  // full-screen button: just the browser's own full screen (iPhone Safari doesn't support it for web pages)
+  // full-screen button. Browsers leave full screen whenever a new page loads, so the button puts the site in a
+  // full-window frame and makes the outer page full screen: links then only change the frame and full screen stays on.
+  // (iPhone Safari has no full screen for web pages, so the button is hidden there.)
   function fullScreenBtn() {
     const btn = $("#focusBtn"), R = document.documentElement;
     const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+    const inFrame = window.parent !== window;
+    if (inFrame) {                                                   // inside the full-screen frame: report the page, button exits
+      btn.innerHTML = icon("shrink"); btn.title = "Exit full screen";
+      btn.onclick = () => parent.postMessage({ fsExit: true }, "*");
+      parent.postMessage({ fsPage: location.href, title: document.title }, "*");
+      return;
+    }
     if (!(R.requestFullscreen || R.webkitRequestFullscreen)) { btn.style.display = "none"; return; }
-    const paint = () => { const on = !!fsEl(); btn.innerHTML = icon(on ? "shrink" : "expand"); btn.title = on ? "Exit full screen" : "Full screen"; };
+    btn.innerHTML = icon("expand"); btn.title = "Full screen";
+    let frame = null, page = location.href;
+    const exit = () => {
+      if (fsEl()) try { const p = (document.exitFullscreen || document.webkitExitFullscreen).call(document); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+      if (!frame) return;
+      frame.remove(); frame = null; document.body.style.overflow = "";
+      if (page !== location.href) location.href = page;               // land on the page you browsed to
+    };
     btn.onclick = () => {
       try {
-        const p = fsEl() ? (document.exitFullscreen || document.webkitExitFullscreen).call(document) : (R.requestFullscreen || R.webkitRequestFullscreen).call(R);
-        if (p && p.catch) p.catch(() => {});
-      } catch (e) {}
+        const p = (R.requestFullscreen || R.webkitRequestFullscreen).call(R);
+        if (p && p.catch) p.catch(() => { if (frame) exit(); });
+      } catch (e) { return; }
+      page = location.href;
+      frame = document.createElement("iframe");
+      frame.src = location.href; frame.title = document.title;
+      frame.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2147483647;background:var(--bg)";
+      document.body.appendChild(frame); document.body.style.overflow = "hidden";
     };
-    // browsers drop full screen when a new page loads and only allow it again after a tap/click,
-    // so remember it and switch back on with the first tap or key press on the next page
-    let leaving = false;
-    addEventListener("beforeunload", () => { leaving = true; });
-    const remember = (on) => { try { sessionStorage.setItem(lsKey("fs"), on ? "1" : ""); } catch (e) {} };
-    const onChange = () => { paint(); if (!leaving) remember(!!fsEl()); };
+    addEventListener("message", (e) => {
+      if (!frame || e.source !== frame.contentWindow || !e.data) return;
+      if (e.data.fsExit) exit();
+      if (e.data.fsPage) { page = e.data.fsPage; if (e.data.title) document.title = e.data.title; }
+    });
+    const onChange = () => { if (!fsEl() && frame) exit(); };      // Esc / swipe out of full screen
     document.addEventListener("fullscreenchange", onChange); document.addEventListener("webkitfullscreenchange", onChange);
-    let want = false; try { want = sessionStorage.getItem(lsKey("fs")) === "1"; } catch (e) {}
-    if (want) {
-      const again = (e) => {
-        removeEventListener("pointerdown", again, true); removeEventListener("keydown", again, true);
-        if (fsEl() || (e.target && e.target.closest && e.target.closest("#focusBtn"))) return;
-        try { const p = (R.requestFullscreen || R.webkitRequestFullscreen).call(R); if (p && p.catch) p.catch(() => {}); } catch (err) {}
-      };
-      addEventListener("pointerdown", again, true); addEventListener("keydown", again, true);
-    }
-    paint();
   }
   function topbar(active) {
     const S = window.SITE || { brand: "Study", links: [] };
