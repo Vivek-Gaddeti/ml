@@ -771,39 +771,35 @@
       window.addEventListener("scroll", () => !menu.hidden && open(false), { passive: true });
     });
   }
-  // focus mode: hides the header and sidebar and, where the browser allows it, goes truly full screen
-  // (iPhone Safari has no full-screen API for pages, so there it is just the distraction-free layout)
-  function focusMode() {
-    const R = document.documentElement, fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
-    let exitBtn = document.getElementById("focusExit");
-    if (!exitBtn) {
-      exitBtn = document.createElement("button");
-      exitBtn.id = "focusExit"; exitBtn.className = "icon-btn"; exitBtn.title = "Exit focus mode (Esc)"; exitBtn.setAttribute("aria-label", "Exit focus mode");
-      exitBtn.innerHTML = icon("shrink");
-      document.body.appendChild(exitBtn);
-    }
-    const set = (on) => {
-      R.classList.toggle("focus", on);
-      document.body.classList.remove("sidebar-open");
-      try { sessionStorage.setItem("focus", on ? "1" : ""); } catch (e) {}
-      if (on && !fsEl()) { const req = R.requestFullscreen || R.webkitRequestFullscreen; if (req) try { const p = req.call(R); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
-      if (!on && fsEl()) { const ex = document.exitFullscreen || document.webkitExitFullscreen; if (ex) try { const p = ex.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+  // full-screen button: just the browser's own full screen (iPhone Safari doesn't support it for web pages)
+  function fullScreenBtn() {
+    const btn = $("#focusBtn"), R = document.documentElement;
+    const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+    if (!(R.requestFullscreen || R.webkitRequestFullscreen)) { btn.style.display = "none"; return; }
+    const paint = () => { const on = !!fsEl(); btn.innerHTML = icon(on ? "shrink" : "expand"); btn.title = on ? "Exit full screen" : "Full screen"; };
+    btn.onclick = () => {
+      try {
+        const p = fsEl() ? (document.exitFullscreen || document.webkitExitFullscreen).call(document) : (R.requestFullscreen || R.webkitRequestFullscreen).call(R);
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
     };
-    $("#focusBtn").onclick = () => set(true);
-    exitBtn.onclick = () => set(false);
-    if (R.dataset.focusWired) return;
-    R.dataset.focusWired = "1";
-    // stay in the distraction-free layout when moving between pages in the same tab
-    try { if (sessionStorage.getItem("focus") === "1") R.classList.add("focus"); } catch (e) {}
-    // leaving browser full screen (Esc / swipe) also leaves focus mode
-    const onFs = () => { if (!fsEl() && R.classList.contains("focus") && R.dataset.fsWas) set(false); R.dataset.fsWas = fsEl() ? "1" : ""; };
-    document.addEventListener("fullscreenchange", onFs); document.addEventListener("webkitfullscreenchange", onFs);
-    document.addEventListener("keydown", (e) => {
-      if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable], .cm-editor, .CodeMirror")) return;
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key === "f" || e.key === "F") { e.preventDefault(); set(!R.classList.contains("focus")); }
-      else if (e.key === "Escape" && R.classList.contains("focus") && !fsEl()) set(false);
-    });
+    // browsers drop full screen when a new page loads and only allow it again after a tap/click,
+    // so remember it and switch back on with the first tap or key press on the next page
+    let leaving = false;
+    addEventListener("beforeunload", () => { leaving = true; });
+    const remember = (on) => { try { sessionStorage.setItem(lsKey("fs"), on ? "1" : ""); } catch (e) {} };
+    const onChange = () => { paint(); if (!leaving) remember(!!fsEl()); };
+    document.addEventListener("fullscreenchange", onChange); document.addEventListener("webkitfullscreenchange", onChange);
+    let want = false; try { want = sessionStorage.getItem(lsKey("fs")) === "1"; } catch (e) {}
+    if (want) {
+      const again = (e) => {
+        removeEventListener("pointerdown", again, true); removeEventListener("keydown", again, true);
+        if (fsEl() || (e.target && e.target.closest && e.target.closest("#focusBtn"))) return;
+        try { const p = (R.requestFullscreen || R.webkitRequestFullscreen).call(R); if (p && p.catch) p.catch(() => {}); } catch (err) {}
+      };
+      addEventListener("pointerdown", again, true); addEventListener("keydown", again, true);
+    }
+    paint();
   }
   function topbar(active) {
     const S = window.SITE || { brand: "Study", links: [] };
@@ -828,9 +824,9 @@
       ${S.links.map(([, , sub], i) => sub ? `<div class="nav-menu" role="menu" data-menu="${i}" style="--c:${NAV_COLORS[i % NAV_COLORS.length][0]}" hidden>${sub.map(([href, label, note]) => `<a role="menuitem" href="${href}" class="${href === active ? "active" : ""}">${navIcon(label)}<span><b>${label}</b>${note ? `<small>${note}</small>` : ""}</span></a>`).join("")}</div>` : "").join("")}
       ${streak > 0 ? `<span class="d-streak" title="${streak}-day study streak"><span class="f">${icon("flame")}</span><span class="sn">${streak}</span></span>` : ""}
       <span class="fx-slot"></span>
-      <button class="icon-btn" id="focusBtn" title="Focus mode (F)" aria-label="Focus mode">${icon("expand")}</button>
+      <button class="icon-btn" id="focusBtn" title="Full screen" aria-label="Full screen">${icon("expand")}</button>
       <button class="icon-btn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle theme">${THEME_SVG}</button>`;
-    focusMode();
+    fullScreenBtn();
     $("#themeBtn").onclick = () => {
       const cur = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
       document.documentElement.dataset.theme = cur;
