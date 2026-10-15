@@ -465,6 +465,16 @@ svg marker path { fill: var(--muted); }
   .brand-name { display: none; }
   .topbar { gap: .4rem; padding: 0 .6rem; }
 }
+/* ===== Focus mode (header button / F key): no header, no sidebar, just the page ===== */
+#focusExit { display: none; }
+html.focus { --top-h: 0px; }
+html.focus .topbar, html.focus .sidebar, html.focus .d-resume, html.focus .d-glow { display: none !important; }
+html.focus .layout { grid-template-columns: minmax(0, 1fr); min-height: 100vh; }
+html.focus .content { margin: 0 auto; }
+html.focus #focusExit { display: grid; place-items: center; position: fixed; top: max(.6rem, env(safe-area-inset-top)); right: max(.6rem, env(safe-area-inset-right)); z-index: 60; opacity: .35; transition: opacity .2s; }
+html.focus #focusExit:hover, html.focus #focusExit:focus-visible { opacity: 1; }
+@media (hover: none) { html.focus #focusExit { opacity: .7; } }
+#focusBtn svg, #focusExit svg { width: 18px; height: 18px; }
 @media print {
   .topbar, .sidebar, .doc-actions, .code-head .btn { display: none !important; }
   .layout { display: block; }

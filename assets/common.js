@@ -46,6 +46,8 @@
     snowflake: '<path d="M12 2.5v19M3.8 7.3l16.4 9.4M3.8 16.7l16.4-9.4"/><path d="M9.5 4.5 12 6.5l2.5-2M9.5 19.5 12 17.5l2.5 2"/>',
     heart: '<path d="M12 20s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 7.6a4.2 4.2 0 0 1 7.5 2.4c0 5.4-7.5 10-7.5 10z"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+    shrink: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
     flag: '<path d="M5.5 21V4"/><path d="M5.5 4.5h12l-2.5 4 2.5 4h-12"/>',
     turtle: '<path d="M4 14c0-3.9 3.6-7 8-7s8 3.1 8 7H4z"/><path d="M20 12.5h1.5a1 1 0 0 0 0-2H19"/><path d="M7 14v3M17 14v3M11 14v3"/><path d="M9 7.4 10.5 10l1.5-2.6L13.5 10 15 7.4"/>',
     snake: '<path d="M3 17.5c2.5 0 2.5-3.5 5-3.5s2.5 3.5 5 3.5 2.5-3.5 5-3.5c1.5 0 2-1.6 2-3.2V8.5a2.5 2.5 0 0 0-5 0"/><path d="M17.8 8.4h.01"/>',
@@ -769,6 +771,40 @@
       window.addEventListener("scroll", () => !menu.hidden && open(false), { passive: true });
     });
   }
+  // focus mode: hides the header and sidebar and, where the browser allows it, goes truly full screen
+  // (iPhone Safari has no full-screen API for pages, so there it is just the distraction-free layout)
+  function focusMode() {
+    const R = document.documentElement, fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+    let exitBtn = document.getElementById("focusExit");
+    if (!exitBtn) {
+      exitBtn = document.createElement("button");
+      exitBtn.id = "focusExit"; exitBtn.className = "icon-btn"; exitBtn.title = "Exit focus mode (Esc)"; exitBtn.setAttribute("aria-label", "Exit focus mode");
+      exitBtn.innerHTML = icon("shrink");
+      document.body.appendChild(exitBtn);
+    }
+    const set = (on) => {
+      R.classList.toggle("focus", on);
+      document.body.classList.remove("sidebar-open");
+      try { sessionStorage.setItem("focus", on ? "1" : ""); } catch (e) {}
+      if (on && !fsEl()) { const req = R.requestFullscreen || R.webkitRequestFullscreen; if (req) try { const p = req.call(R); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+      if (!on && fsEl()) { const ex = document.exitFullscreen || document.webkitExitFullscreen; if (ex) try { const p = ex.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+    };
+    $("#focusBtn").onclick = () => set(true);
+    exitBtn.onclick = () => set(false);
+    if (R.dataset.focusWired) return;
+    R.dataset.focusWired = "1";
+    // stay in the distraction-free layout when moving between pages in the same tab
+    try { if (sessionStorage.getItem("focus") === "1") R.classList.add("focus"); } catch (e) {}
+    // leaving browser full screen (Esc / swipe) also leaves focus mode
+    const onFs = () => { if (!fsEl() && R.classList.contains("focus") && R.dataset.fsWas) set(false); R.dataset.fsWas = fsEl() ? "1" : ""; };
+    document.addEventListener("fullscreenchange", onFs); document.addEventListener("webkitfullscreenchange", onFs);
+    document.addEventListener("keydown", (e) => {
+      if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable], .cm-editor, .CodeMirror")) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "f" || e.key === "F") { e.preventDefault(); set(!R.classList.contains("focus")); }
+      else if (e.key === "Escape" && R.classList.contains("focus") && !fsEl()) set(false);
+    });
+  }
   function topbar(active) {
     const S = window.SITE || { brand: "Study", links: [] };
     const h = document.getElementById("topbar");
@@ -792,7 +828,9 @@
       ${S.links.map(([, , sub], i) => sub ? `<div class="nav-menu" role="menu" data-menu="${i}" style="--c:${NAV_COLORS[i % NAV_COLORS.length][0]}" hidden>${sub.map(([href, label, note]) => `<a role="menuitem" href="${href}" class="${href === active ? "active" : ""}">${navIcon(label)}<span><b>${label}</b>${note ? `<small>${note}</small>` : ""}</span></a>`).join("")}</div>` : "").join("")}
       ${streak > 0 ? `<span class="d-streak" title="${streak}-day study streak"><span class="f">${icon("flame")}</span><span class="sn">${streak}</span></span>` : ""}
       <span class="fx-slot"></span>
+      <button class="icon-btn" id="focusBtn" title="Focus mode (F)" aria-label="Focus mode">${icon("expand")}</button>
       <button class="icon-btn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle theme">${THEME_SVG}</button>`;
+    focusMode();
     $("#themeBtn").onclick = () => {
       const cur = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
       document.documentElement.dataset.theme = cur;
