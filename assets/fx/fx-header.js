@@ -205,10 +205,12 @@
     sT = 0;
     const y = scrollY;
     if (!small && y > 70) small = true; else if (small && y < 12) small = false;   // gap avoids flicker
-    root.style.setProperty("--top-h", small ? "48px" : "56px");
+    // calm style: the header keeps its size; --top-h is its real height (two rows on phones)
+    root.style.setProperty("--top-h", (bar ? bar.offsetHeight : 56) + "px");
     if (bar) bar.classList.toggle("scrolled", y > 4);
   }
   window.addEventListener("scroll", () => { if (!sT) sT = requestAnimationFrame(onScroll); }, { passive: true });
   window.addEventListener("hashchange", () => setTimeout(onScroll, 50));
+  window.addEventListener("resize", () => { if (!sT) sT = requestAnimationFrame(onScroll); }, { passive: true });
   onScroll();
 })();
