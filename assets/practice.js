@@ -288,14 +288,14 @@
   let curView = "list";
 
   /* ---------------- Problem timer ----------------
-     Starts when you open a problem and only counts while the page is visible on screen.
+     Starts when you press its play button and only counts while the page is visible on screen.
      When you mark the problem solved, the time is saved (last + best) and shown here and in the list. */
   const mmss = (sec) => { sec = Math.round(sec); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return (h ? h + ":" + String(m).padStart(2, "0") : String(m).padStart(2, "0")) + ":" + String(s).padStart(2, "0"); };
   const T = { key: null, acc: 0, since: null, paused: false, iv: 0 };
   const elapsed = () => (T.acc + (T.since ? Date.now() - T.since : 0)) / 1000;
   function timerStart(key) {
     clearInterval(T.iv);
-    Object.assign(T, { key, acc: 0, since: document.visibilityState === "visible" ? Date.now() : null, paused: false });
+    Object.assign(T, { key, acc: 0, since: null, paused: true });     // waits for you to press start: no pressure while reading
     T.iv = setInterval(timerDraw, 1000);
     timerDraw();
   }
@@ -315,7 +315,7 @@
   function timerHTML(it) {
     const extra = it.best ? `<span class="best" title="Last: ${mmss(it.last || it.best)}">best ${mmss(it.best)}</span>` : "";
     return `<span class="nc-timer" id="ncTimer" title="Time on this problem (pauses when you switch tabs)">${icon("timer")}&nbsp;<span class="t">00:00</span>
-      <button class="btn sm" data-t="pause" title="Pause / resume">${swapLabel([icon("pause"), icon("play")])}</button><button class="btn sm" data-t="reset" title="Restart from 0">${icon("restart")}</button>${extra}</span>`;
+      <button class="btn sm" data-t="pause" title="Start / pause the timer">${swapLabel([icon("pause"), icon("play")])}</button><button class="btn sm" data-t="reset" title="Restart from 0">${icon("restart")}</button>${extra}</span>`;
   }
   main.addEventListener("click", (e) => {
     const b = e.target.closest("[data-t]");

@@ -277,6 +277,7 @@
     const tools = (om ? `<button class="btn" data-step="${i}" title="Run the code one line at a time and watch the variables">${swapLabel([icon("play") + " Step through", "Loading…", icon("x") + " Close stepper"])}</button>
         <button class="btn" data-outmode title="Show each output under the line that printed it, or all together at the end">${swapLabel(["Outputs: inline", "Outputs: at end"], outMode === "end" ? 1 : 0)}</button>` : "") +
       (isPy && !local ? `<button class="btn" data-try="${i}" title="Change this code and run it right here">${swapLabel([icon("pencil") + " Edit & run", icon("x") + " Close editor"])}</button>` : "") +
+      `<button class="btn" data-wrap aria-pressed="${document.documentElement.classList.contains("wrap-code")}" title="Wrap long lines so nothing hides off the edge">Wrap</button>` +
       `<button class="btn" data-copy="${i}">${swapLabel(["Copy", "Copied " + icon("check")])}</button>`;
     let body = lines.map((ln, k) => `<div class="cl" data-ln="${k + 1}"><span class="gut">${k + 1}</span><span class="src">${ln || " "}</span></div>` +
       (after[k + 1] != null ? `<div class="co"><span class="gut">⤷</span><pre title="output printed by line ${k + 1}">${esc(after[k + 1])}</pre></div>` : "")).join("");
@@ -875,10 +876,10 @@
     const it = Store.item(key);
     const doneLabel = opts.doneLabel || "Mark as learned";
     const due = it.next ? relDay(it.next) : "";
-    return `<div class="doc-actions" data-key="${key}">
+    return `<div class="doc-actions${opts.compact ? " compact" : ""}" data-key="${key}">
       <button class="btn ${it.status === "done" ? "on-green" : ""}" data-act="done">${swapLabel([icon("circle") + " " + doneLabel, icon("check") + " " + (opts.doneOn || "Learned")], it.status === "done" ? 1 : 0)}</button>
-      <button class="btn ${it.status === "revise" ? "on-red" : ""}" data-act="revise">${swapLabel([icon("repeat") + " Mark for revision", icon("repeat") + " Needs revision"], it.status === "revise" ? 1 : 0)}</button>
-      <button class="btn ${it.star ? "on-amber" : ""}" data-act="star">${swapLabel([icon("star") + " Bookmark", icon("star-fill") + " Bookmarked"], it.star ? 1 : 0)}</button>
+      <button class="btn ${it.status === "revise" ? "on-red" : ""}" data-act="revise" title="Mark for revision" aria-label="Mark for revision">${swapLabel([icon("repeat") + " Mark for revision", icon("repeat") + " Needs revision"], it.status === "revise" ? 1 : 0)}</button>
+      <button class="btn ${it.star ? "on-amber" : ""}" data-act="star" title="Bookmark" aria-label="Bookmark">${swapLabel([icon("star") + " Bookmark", icon("star-fill") + " Bookmarked"], it.star ? 1 : 0)}</button>
       <span class="small muted due">${it.status && due ? "Next review: " + due : ""}</span>
     </div>`;
   }
@@ -889,15 +890,19 @@
     if (act === "done") { Store.setStatus(key, it.status === "done" ? null : "done"); toast(it.status === "done" ? "Unmarked" : "Nice! Added to your revision schedule"); }
     if (act === "revise") { Store.setStatus(key, it.status === "revise" ? (it.doneAt ? "done" : null) : "revise"); }
     if (act === "star") { Store.toggleStar(key); }
-    // update the buttons in place (no re-render), so they keep their size and position
-    const fresh = document.createElement("div");
-    fresh.innerHTML = actionBar(key, JSON.parse(bar.dataset.opts || "{}"));
-    bar.querySelectorAll("[data-act]").forEach((btn) => {
-      const nb = fresh.querySelector(`[data-act="${btn.dataset.act}"]`);
-      btn.className = nb.className;
-      setSwap(btn, nb.querySelector(".swap").dataset.s);
+    // update the buttons in place (no re-render), so they keep their size and position; a page can show the
+    // same item's bar twice (small icons by the title, full buttons at the end), so refresh every copy
+    document.querySelectorAll(".doc-actions").forEach((bb) => {
+      if (bb.dataset.key !== key) return;
+      const fresh = document.createElement("div");
+      fresh.innerHTML = actionBar(key, JSON.parse(bb.dataset.opts || "{}"));
+      bb.querySelectorAll("[data-act]").forEach((btn) => {
+        const nb = fresh.querySelector(`[data-act="${btn.dataset.act}"]`);
+        btn.className = nb.className;
+        setSwap(btn, nb.querySelector(".swap").dataset.s);
+      });
+      bb.querySelector(".due").textContent = fresh.querySelector(".due").textContent;
     });
-    bar.querySelector(".due").textContent = fresh.querySelector(".due").textContent;
   });
   function relDay(t) {
     const days = Math.round((new Date(today(t)) - new Date(today())) / DAY);
@@ -916,6 +921,166 @@
     clearTimeout(noteT);
     noteT = setTimeout(() => Store.setNote(t.dataset.note, t.value), 400);
   });
+
+  /* ------------------------------------------------------------- "On this page" contents */
+  let tocHeads = [];
+  function buildToc(main) {
+    main.classList.remove("has-toc");
+    tocHeads = [...main.querySelectorAll(".doc-body h2, .doc-body h3")];
+    if (tocHeads.length < 2) { tocHeads = []; return; }
+    const box = document.createElement("details");
+    box.className = "toc-box";
+    if (innerWidth >= 1280) box.open = true;
+    box.innerHTML = `<summary>On this page · ${tocHeads.length} parts</summary><div class="toc-list">${tocHeads.map((h, i) => `<button type="button" class="${h.tagName === "H3" ? "h3" : ""}" data-toc="${i}">${esc(h.textContent)}</button>`).join("")}</div>`;
+    main.insertBefore(box, main.querySelector(".doc-body"));
+    main.classList.add("has-toc");
+    tocMark();
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-toc]");
+    if (!b) return;
+    const h = tocHeads[+b.dataset.toc], topH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--top-h")) || 56;
+    if (h) window.scrollTo({ top: h.getBoundingClientRect().top + scrollY - topH - 16 });
+  });
+  function tocMark() {
+    if (!tocHeads.length) return;
+    let cur = 0;
+    tocHeads.forEach((h, i) => { if (h.getBoundingClientRect().top < 160) cur = i; });
+    document.querySelectorAll("[data-toc]").forEach((b) => b.classList.toggle("on", +b.dataset.toc === cur));
+  }
+  let tocT = 0;
+  addEventListener("scroll", () => { if (!tocT) tocT = requestAnimationFrame(() => { tocT = 0; tocMark(); }); }, { passive: true });
+
+  /* ------------------------------------------------------------- phones / tablets: Prev · Contents · Next bar */
+  function mobileNav(prev, next) {
+    let nav = document.querySelector(".mobile-nav");
+    if (!nav) {
+      nav = document.createElement("nav");
+      nav.className = "mobile-nav"; nav.setAttribute("aria-label", "Lesson navigation");
+      document.body.appendChild(nav);
+      nav.addEventListener("click", (e) => {
+        if (!e.target.closest("[data-contents]")) return;
+        e.stopPropagation();
+        document.body.classList.toggle("sidebar-open");
+      });
+    }
+    document.body.classList.add("has-mobile-nav");
+    nav.innerHTML = `<a class="prev${prev ? "" : " off"}" href="${prev ? "#" + prev.id : "#"}">← Prev</a><button type="button" data-contents>Contents</button><a class="next${next ? "" : " off"}" href="${next ? "#" + next.id : "#"}">Next →</a>`;
+  }
+
+  /* ------------------------------------------------------------- code: wrap long lines (remembered) */
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-wrap]");
+    if (!b) return;
+    const on = document.documentElement.classList.toggle("wrap-code");
+    try { localStorage.setItem("wrapcode", on ? "1" : "0"); } catch (err) {}
+    document.querySelectorAll("[data-wrap]").forEach((x) => x.setAttribute("aria-pressed", on));
+  });
+
+  /* ------------------------------------------------------------- pen notes: write or draw on a lesson (pen, finger or mouse)
+     Strokes are kept per lesson in this browser. Points are stored relative to the page width. With a stylus,
+     a finger still scrolls while the pen draws. */
+  const PEN_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16Z"/><path d="M14 6l3 3"/></svg>`;
+  const PEN = { key: null, strokes: [], tool: "pen", color: "#D9480F", cv: null, host: null, cur: null, seenPen: false, lastY: 0 };
+  const penLoad = (k) => { try { return JSON.parse(localStorage.getItem(lsKey("pen:" + k)) || "[]"); } catch (e) { return []; } };
+  const penSave = () => { try { localStorage.setItem(lsKey("pen:" + PEN.key), JSON.stringify(PEN.strokes)); } catch (e) {} };
+  function penBar() {
+    let bar = document.querySelector(".pen-bar");
+    if (bar) return bar;
+    const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+    bar = document.createElement("div");
+    bar.className = "pen-bar"; bar.setAttribute("role", "toolbar"); bar.setAttribute("aria-label", "Pen tools");
+    bar.innerHTML = `<button type="button" data-tool="pen" aria-pressed="true" aria-label="Pen">${sv('<path d="M4 20l4-1 11-11-3-3L5 16Z"/>')}</button>
+      <button type="button" data-tool="hl" aria-pressed="false" aria-label="Highlighter">${sv('<path d="M9 15l-4 4h6l1-1M9 15l8-8 3 3-8 8Z"/>')}</button>
+      <button type="button" data-tool="erase" aria-pressed="false" aria-label="Eraser">${sv('<path d="M8 20h12M5 15l9-9 5 5-8 8H8Z"/>')}</button>
+      <span class="sep"></span>
+      <button type="button" class="sw" data-color="#D9480F" aria-pressed="true" aria-label="Orange ink" style="background:#D9480F"></button>
+      <button type="button" class="sw" data-color="#2457C5" aria-pressed="false" aria-label="Blue ink" style="background:#2457C5"></button>
+      <button type="button" class="sw" data-color="#1B1F24" aria-pressed="false" aria-label="Black ink" style="background:#1B1F24;border-color:#6B7380"></button>
+      <span class="sep"></span>
+      <button type="button" data-pa="undo" aria-label="Undo">${sv('<path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"/>')}</button>
+      <button type="button" data-pa="clear" aria-label="Clear this page's drawing">${sv('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>')}</button>
+      <button type="button" class="done" data-pa="done">Done</button>`;
+    document.body.appendChild(bar);
+    bar.addEventListener("click", (e) => {
+      const t = e.target.closest("button");
+      if (!t) return;
+      if (t.dataset.tool) { PEN.tool = t.dataset.tool; bar.querySelectorAll("[data-tool]").forEach((x) => x.setAttribute("aria-pressed", x === t)); }
+      if (t.dataset.color) { PEN.color = t.dataset.color; bar.querySelectorAll("[data-color]").forEach((x) => x.setAttribute("aria-pressed", x === t)); if (PEN.tool === "erase") bar.querySelector('[data-tool="pen"]').click(); }
+      if (t.dataset.pa === "undo") { PEN.strokes.pop(); penSave(); penDraw(); }
+      if (t.dataset.pa === "clear" && PEN.strokes.length && confirm("Clear everything you drew on this lesson?")) { PEN.strokes = []; penSave(); penDraw(); }
+      if (t.dataset.pa === "done") document.documentElement.classList.remove("pen-on");
+    });
+    return bar;
+  }
+  function penSize() {
+    const cv = PEN.cv, host = PEN.host;
+    if (!cv || !host.isConnected) return;
+    cv.style.height = "0px";
+    const W = host.clientWidth, H = host.scrollHeight, dpr = window.devicePixelRatio || 1;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    penDraw();
+  }
+  function penStroke(ctx, st, W) {
+    const p = st.pts;
+    if (!p.length) return;
+    ctx.globalAlpha = st.a; ctx.strokeStyle = st.c; ctx.lineWidth = st.w; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(p[0][0] * W, p[0][1] * W);
+    if (p.length === 1) ctx.lineTo(p[0][0] * W + 0.1, p[0][1] * W);
+    for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0] * W, p[i][1] * W);
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  function penDraw() {
+    const cv = PEN.cv;
+    if (!cv) return;
+    const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1, W = cv.width / dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, cv.height / dpr);
+    PEN.strokes.forEach((st) => penStroke(ctx, st, W));
+  }
+  function penSetup(host, key) {
+    penBar();
+    PEN.key = key; PEN.host = host; PEN.strokes = penLoad(key);
+    const cv = document.createElement("canvas");
+    cv.className = "pen-layer"; cv.setAttribute("aria-hidden", "true");
+    host.appendChild(cv); PEN.cv = cv;
+    const at = (e) => { const r = cv.getBoundingClientRect(), W = r.width || 1; return [(e.clientX - r.left) / W, (e.clientY - r.top) / W]; };
+    cv.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "pen") PEN.seenPen = true;
+      if (e.pointerType === "touch" && PEN.seenPen) { PEN.cur = "scroll"; PEN.lastY = e.clientY; return; }   // finger scrolls, pen writes
+      cv.setPointerCapture(e.pointerId);
+      if (PEN.tool === "erase") { PEN.cur = "erase"; penErase(at(e)); return; }
+      const hl = PEN.tool === "hl";
+      PEN.cur = { c: hl ? "#FFD43B" : PEN.color, w: hl ? 18 : 2.6, a: hl ? 0.38 : 1, pts: [at(e)] };
+      PEN.strokes.push(PEN.cur); penDraw();
+    });
+    cv.addEventListener("pointermove", (e) => {
+      if (!PEN.cur) return;
+      if (PEN.cur === "scroll") { window.scrollBy(0, PEN.lastY - e.clientY); PEN.lastY = e.clientY; return; }
+      if (PEN.cur === "erase") { penErase(at(e)); return; }
+      PEN.cur.pts.push(at(e).map((v) => +v.toFixed(4)));
+      const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1, W = cv.width / dpr, p = PEN.cur.pts;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      penStroke(ctx, { ...PEN.cur, pts: p.slice(-2) }, W);
+    });
+    const end = () => { if (PEN.cur && PEN.cur !== "scroll") penSave(); PEN.cur = null; };
+    cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+    penSize();
+    if (!penSetup.ro && window.ResizeObserver) { penSetup.ro = new ResizeObserver(() => penSize()); }
+    if (penSetup.ro) { penSetup.ro.disconnect(); penSetup.ro.observe(host); }
+    setTimeout(penSize, 600);                                         // diagrams and plots settle a moment later
+  }
+  function penErase(pt) {
+    const W = PEN.cv.getBoundingClientRect().width || 1, r = 14 / W, n = PEN.strokes.length;
+    PEN.strokes = PEN.strokes.filter((st) => !st.pts.some((q) => Math.hypot(q[0] - pt[0], q[1] - pt[1]) < r));
+    if (PEN.strokes.length !== n) { penSave(); penDraw(); }
+  }
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("[data-pen]")) return;
+    document.documentElement.classList.toggle("pen-on");
+    penSize();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.documentElement.classList.contains("pen-on")) document.documentElement.classList.remove("pen-on"); });
 
   /* ------------------------------------------------------------- DocPage: sidebar + one section at a time */
   function textOf(blocks) {
@@ -999,23 +1164,32 @@
       const key = kind + ":" + s.id, prev = secs[i - 1], next = secs[i + 1];
       if (s.group && getFolds().includes(s.group)) setFolds(getFolds().filter((x) => x !== s.group));
       document.title = s.title + " · " + (cfg.title || "");
+      // what the student sees before reading: where they are, how long it takes, what is inside
+      const kinds = (s.blocks || []).map((b) => (Array.isArray(b) ? b[0] : ""));
+      const nCode = kinds.filter((k) => k === "code").length, nViz = kinds.filter((k) => k === "viz" || k === "diagram").length;
+      const mins = Math.max(1, Math.round(textOf(s.blocks).split(/\s+/).length / 200));
+      const meta = [`${mins} min read`, `${i + 1} of ${secs.length}`, nCode ? `${nCode} code example${nCode === 1 ? "" : "s"}` : "", nViz ? `${nViz} diagram${nViz === 1 ? "" : "s"}` : ""]
+        .concat(s.tags || []).filter(Boolean);
+      const compactOpts = Object.assign({}, cfg.actionOpts || {}, { compact: 1 });
       main.innerHTML = `
-        <div class="crumbs">${esc(cfg.title || "")}${s.group ? " / " + esc(s.group) : ""}</div>
-        <h1>${esc(s.title)}</h1>
+        <div class="crumbs">${esc(cfg.title || "")}${s.group ? " › " + esc(s.group) : ""}</div>
+        <div class="doc-title-row"><h1>${esc(s.title)}</h1><div class="btn-row doc-top-tools">${actionBar(key, compactOpts)}<button type="button" class="btn pen-btn" data-pen title="Write or draw on this page" aria-label="Pen notes">${PEN_SVG}</button></div></div>
         ${s.sub ? `<p class="lead">${fmt(s.sub)}</p>` : ""}
-        ${window.BRIEFS && BRIEFS[key] ? `<div class="callout tip brief"><span class="label">${icon("bulb")} In short, in plain English</span>${String(BRIEFS[key]).split(/\n\s*\n/).map((x) => `<p>${fmt(x.trim())}</p>`).join("")}</div>` : ""}
-        ${s.tags ? `<div class="btn-row my-2">${s.tags.map((t) => `<span class="badge blue">${esc(t)}</span>`).join("")}</div>` : ""}
-        ${actionBar(key, cfg.actionOpts)}
+        <div class="doc-meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</div>
+        ${window.BRIEFS && BRIEFS[key] ? `<div class="callout brief"><span class="label">${icon("bulb")} In plain English</span>${String(BRIEFS[key]).split(/\n\s*\n/).map((x) => `<p>${fmt(x.trim())}</p>`).join("")}</div>` : ""}
         <div class="doc-body">${renderBlocks(s.blocks)}</div>
-        <hr>${notesBox(key)}
+        <div class="doc-finish"><div class="doc-finish-t"><b>Finished this lesson?</b><div class="small muted">It comes back for review after 1, 3, 7… days.</div></div>${actionBar(key, cfg.actionOpts)}</div>
+        ${notesBox(key)}
         <div class="btn-row page-nav">
-          ${prev ? `<a class="btn" href="#${prev.id}">← ${esc(prev.title)}</a>` : "<span></span>"}
-          ${next ? `<a class="btn primary" href="#${next.id}">${esc(next.title)} →</a>` : ""}
+          ${prev ? `<a class="btn" href="#${prev.id}"><span class="small muted">← Previous</span><span>${esc(prev.title)}</span></a>` : "<span></span>"}
+          ${next ? `<a class="btn primary" href="#${next.id}"><span class="small muted">Next →</span><span>${esc(next.title)}</span></a>` : ""}
         </div>`;
-      const bar = main.querySelector(".doc-actions");
-      if (bar) bar.dataset.opts = JSON.stringify(cfg.actionOpts || {});
+      main.querySelectorAll(".doc-actions").forEach((b) => (b.dataset.opts = JSON.stringify(b.classList.contains("compact") ? compactOpts : cfg.actionOpts || {})));
       if (window.Viz) Viz.mountAll(main);
       if (window.glossify) glossify(main);
+      buildToc(main);
+      mobileNav(prev, next);
+      penSetup(main, key);
       sidebar();
       document.body.classList.remove("sidebar-open");
       window.scrollTo(0, 0);

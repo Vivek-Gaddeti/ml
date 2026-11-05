@@ -164,10 +164,7 @@
             <div class="dash-goal" title="Today: ${M.todayN} of ${GOAL} actions"><svg viewBox="0 0 58 58" aria-hidden="true">${ring(1, "goal-track")}${goalFrac > 0 ? ring(goalFrac, "goal-arc") : ""}</svg>
               <div><b>${Math.min(M.todayN, GOAL)}/${GOAL}</b><span>today</span></div></div>
           </section>
-          <div class="dash-pair">
-            <section class="card dash-card"><div class="small muted">Current streak</div><div class="dash-big">${ICON(I.flame, "cat-ico ico-amber")}<span class="stat">${M.streak} day${M.streak === 1 ? "" : "s"}</span></div></section>
-            <section class="card dash-card"><div class="small muted">Best streak</div><div class="dash-big">${ICON(I.trophy, "cat-ico ico-amber")}<span class="stat">${M.best} day${M.best === 1 ? "" : "s"}</span></div></section>
-          </div>
+          <section class="card dash-card dash-streak-line">${ICON(I.flame, "cat-ico ico-amber")}<span>Streak <b>${M.streak} day${M.streak === 1 ? "" : "s"}</b></span><span class="muted">· best ${M.best}</span></section>
           ${gauge(M.gauge)}
           <section class="card dash-card">
             <div class="row-between"><div class="dash-h">Review</div>${due.length ? `<span class="badge purple">${due.length} due today</span>` : `<span class="badge easy">all caught up</span>`}</div>
@@ -177,13 +174,20 @@
         </aside>
 
         <div class="dash-main">
-          <section class="card dash-card hm" id="hm">
+          ${(() => { const c = M.courses.find((x) => x.next); return c ? `<section class="card dash-next">
+            <span class="dash-kicker">Up next · ${esc(c.name)}</span>
+            <h2>${esc(c.next.t)}</h2>
+            <span class="ct-bar"><span style="width: ${c.total ? ((c.done / c.total) * 100).toFixed(1) : 0}%"></span></span>
+            <span class="small muted">${c.done} of ${c.total} done in ${esc(c.name)}</span><br>
+            <a class="btn primary" href="${c.next.href}">Continue ${ICON(I.arrow)}</a></section>` : ""; })()}
+          <details class="card dash-card hm-fold"><summary>Study history · ${H.total} action${H.total === 1 ? "" : "s"} in ${year}</summary>
+          <section class="hm" id="hm">
             <div class="hm-head"><b>${ICON(I.pulse, "cat-ico ico-green")}${H.total} action${H.total === 1 ? "" : "s"} in ${year}</b>
               <span class="hm-stats"><span>Active days <b>${H.days}</b></span><span>Current streak <b>${M.streak}</b></span><span>Max streak <b>${M.best}</b></span>
               <select id="hmYear" aria-label="Year">${H.years.map((y) => `<option ${y === year ? "selected" : ""}>${y}</option>`).join("")}</select></span></div>
             ${H.svg}
             <div class="hm-foot"><span>Each square is a day; greener means you did more that day.</span><span class="hm-legend">Less ${[0, 1, 2, 3, 4].map((l) => `<i class="l${l}"></i>`).join("")} More</span></div>
-          </section>
+          </section></details>
 
           <section>
             <h2 class="dash-h2">Your progress</h2>
