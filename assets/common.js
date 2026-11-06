@@ -977,11 +977,14 @@
     document.querySelectorAll("[data-wrap]").forEach((x) => x.setAttribute("aria-pressed", on));
   });
 
-  /* ------------------------------------------------------------- pen notes: write or draw on a lesson (pen, finger or mouse)
-     Strokes are kept per lesson in this browser. Points are stored relative to the page width. With a stylus,
-     a finger still scrolls while the pen draws. */
+  /* ------------------------------------------------------------- pen notes: write or draw on a lesson
+     One see-through canvas the size of the SCREEN (a page-sized canvas is too big for tablets and gets blurred
+     or shifted), redrawn as you scroll. Ink is stored per lesson, relative to the lesson column, in this browser.
+     With a stylus: the pen writes, a finger scrolls, and touches while the pen is down are ignored (palm). */
   const PEN_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16Z"/><path d="M14 6l3 3"/></svg>`;
-  const PEN = { key: null, strokes: [], tool: "pen", color: "#D9480F", cv: null, host: null, cur: null, seenPen: false, lastY: 0 };
+  const PEN = { key: null, strokes: [], tool: "pen", color: "#D6245F", cv: null, ctx: null, host: null, cur: null, penDown: false, raf: 0,
+    seenPen: (() => { try { return localStorage.getItem("penSeen") === "1"; } catch (e) { return false; } })(),
+    scroll: null };
   const penLoad = (k) => { try { return JSON.parse(localStorage.getItem(lsKey("pen:" + k)) || "[]"); } catch (e) { return []; } };
   const penSave = () => { try { localStorage.setItem(lsKey("pen:" + PEN.key), JSON.stringify(PEN.strokes)); } catch (e) {} };
   function penBar() {
@@ -990,17 +993,17 @@
     const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
     bar = document.createElement("div");
     bar.className = "pen-bar"; bar.setAttribute("role", "toolbar"); bar.setAttribute("aria-label", "Pen tools");
-    bar.innerHTML = `<button type="button" data-tool="pen" aria-pressed="true" aria-label="Pen">${sv('<path d="M4 20l4-1 11-11-3-3L5 16Z"/>')}</button>
+    bar.innerHTML = `<div class="pen-hint">Pen writes · one finger scrolls</div><div class="pen-tools"><button type="button" data-tool="pen" aria-pressed="true" aria-label="Pen">${sv('<path d="M4 20l4-1 11-11-3-3L5 16Z"/>')}</button>
       <button type="button" data-tool="hl" aria-pressed="false" aria-label="Highlighter">${sv('<path d="M9 15l-4 4h6l1-1M9 15l8-8 3 3-8 8Z"/>')}</button>
       <button type="button" data-tool="erase" aria-pressed="false" aria-label="Eraser">${sv('<path d="M8 20h12M5 15l9-9 5 5-8 8H8Z"/>')}</button>
       <span class="sep"></span>
-      <button type="button" class="sw" data-color="#D9480F" aria-pressed="true" aria-label="Orange ink" style="background:#D9480F"></button>
+      <button type="button" class="sw" data-color="#D6245F" aria-pressed="true" aria-label="Raspberry ink" style="background:#D6245F"></button>
       <button type="button" class="sw" data-color="#2457C5" aria-pressed="false" aria-label="Blue ink" style="background:#2457C5"></button>
-      <button type="button" class="sw" data-color="#1B1F24" aria-pressed="false" aria-label="Black ink" style="background:#1B1F24;border-color:#6B7380"></button>
+      <button type="button" class="sw" data-color="#22121A" aria-pressed="false" aria-label="Black ink" style="background:#22121A"></button>
       <span class="sep"></span>
       <button type="button" data-pa="undo" aria-label="Undo">${sv('<path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"/>')}</button>
-      <button type="button" data-pa="clear" aria-label="Clear this page's drawing">${sv('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>')}</button>
-      <button type="button" class="done" data-pa="done">Done</button>`;
+      <button type="button" data-pa="clear" aria-label="Clear this lesson's drawing">${sv('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>')}</button>
+      <button type="button" class="done" data-pa="done">Done</button></div>`;
     document.body.appendChild(bar);
     bar.addEventListener("click", (e) => {
       const t = e.target.closest("button");
@@ -1009,78 +1012,115 @@
       if (t.dataset.color) { PEN.color = t.dataset.color; bar.querySelectorAll("[data-color]").forEach((x) => x.setAttribute("aria-pressed", x === t)); if (PEN.tool === "erase") bar.querySelector('[data-tool="pen"]').click(); }
       if (t.dataset.pa === "undo") { PEN.strokes.pop(); penSave(); penDraw(); }
       if (t.dataset.pa === "clear" && PEN.strokes.length && confirm("Clear everything you drew on this lesson?")) { PEN.strokes = []; penSave(); penDraw(); }
-      if (t.dataset.pa === "done") document.documentElement.classList.remove("pen-on");
+      if (t.dataset.pa === "done") penMode(false);
     });
     return bar;
   }
+  function penMode(on) {
+    document.documentElement.classList.toggle("pen-on", on);
+    if (on) { penBar(); penSize(); }
+  }
+  // the canvas covers the screen; the drawing is clipped to the lesson column and kept under the header
   function penSize() {
-    const cv = PEN.cv, host = PEN.host;
-    if (!cv || !host.isConnected) return;
-    cv.style.height = "0px";
-    const W = host.clientWidth, H = host.scrollHeight, dpr = window.devicePixelRatio || 1;
-    cv.style.width = W + "px"; cv.style.height = H + "px";
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    const cv = PEN.cv;
+    if (!cv) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), w = innerWidth, h = innerHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+      cv.style.width = w + "px"; cv.style.height = h + "px";
+    }
     penDraw();
   }
-  function penStroke(ctx, st, W) {
-    const p = st.pts;
-    if (!p.length) return;
+  const penHost = () => PEN.host.getBoundingClientRect();
+  function penPath(ctx, st, r) {
+    const p = st.pts, X = (q) => r.left + q[0] * r.width, Y = (q) => r.top + q[1] * r.width;
     ctx.globalAlpha = st.a; ctx.strokeStyle = st.c; ctx.lineWidth = st.w; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath(); ctx.moveTo(p[0][0] * W, p[0][1] * W);
-    if (p.length === 1) ctx.lineTo(p[0][0] * W + 0.1, p[0][1] * W);
-    for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0] * W, p[i][1] * W);
+    ctx.beginPath(); ctx.moveTo(X(p[0]), Y(p[0]));
+    if (p.length === 1) ctx.lineTo(X(p[0]) + 0.1, Y(p[0]));
+    else if (p.length === 2) ctx.lineTo(X(p[1]), Y(p[1]));
+    else {                                                            // smooth: curves through the midpoints
+      for (let i = 1; i < p.length - 1; i++) ctx.quadraticCurveTo(X(p[i]), Y(p[i]), (X(p[i]) + X(p[i + 1])) / 2, (Y(p[i]) + Y(p[i + 1])) / 2);
+      ctx.lineTo(X(p[p.length - 1]), Y(p[p.length - 1]));
+    }
     ctx.stroke(); ctx.globalAlpha = 1;
   }
   function penDraw() {
-    const cv = PEN.cv;
-    if (!cv) return;
-    const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1, W = cv.width / dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, cv.height / dpr);
-    PEN.strokes.forEach((st) => penStroke(ctx, st, W));
+    const cv = PEN.cv, ctx = PEN.ctx;
+    if (!cv || !PEN.host || !PEN.host.isConnected) return;
+    const dpr = cv.width / (parseFloat(cv.style.width) || innerWidth);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+    if (!PEN.strokes.length) return;
+    const r = penHost(), bar = document.getElementById("topbar"), top = Math.max(r.top, bar ? bar.getBoundingClientRect().bottom : 0);
+    ctx.save(); ctx.beginPath(); ctx.rect(r.left - 8, top, r.width + 16, Math.max(0, r.bottom - top)); ctx.clip();
+    PEN.strokes.forEach((st) => { if (st.pts.length) penPath(ctx, st, r); });
+    ctx.restore();
   }
+  const penQueue = () => { if (!PEN.raf) PEN.raf = requestAnimationFrame(() => { PEN.raf = 0; penDraw(); }); };
+  addEventListener("scroll", () => { if (PEN.strokes.length) penQueue(); }, { passive: true });
+  addEventListener("resize", () => { if (PEN.cv) penSize(); });
   function penSetup(host, key) {
-    penBar();
-    PEN.key = key; PEN.host = host; PEN.strokes = penLoad(key);
-    const cv = document.createElement("canvas");
-    cv.className = "pen-layer"; cv.setAttribute("aria-hidden", "true");
-    host.appendChild(cv); PEN.cv = cv;
-    const at = (e) => { const r = cv.getBoundingClientRect(), W = r.width || 1; return [(e.clientX - r.left) / W, (e.clientY - r.top) / W]; };
-    cv.addEventListener("pointerdown", (e) => {
-      if (e.pointerType === "pen") PEN.seenPen = true;
-      if (e.pointerType === "touch" && PEN.seenPen) { PEN.cur = "scroll"; PEN.lastY = e.clientY; return; }   // finger scrolls, pen writes
-      cv.setPointerCapture(e.pointerId);
-      if (PEN.tool === "erase") { PEN.cur = "erase"; penErase(at(e)); return; }
-      const hl = PEN.tool === "hl";
-      PEN.cur = { c: hl ? "#FFD43B" : PEN.color, w: hl ? 18 : 2.6, a: hl ? 0.38 : 1, pts: [at(e)] };
-      PEN.strokes.push(PEN.cur); penDraw();
-    });
-    cv.addEventListener("pointermove", (e) => {
-      if (!PEN.cur) return;
-      if (PEN.cur === "scroll") { window.scrollBy(0, PEN.lastY - e.clientY); PEN.lastY = e.clientY; return; }
-      if (PEN.cur === "erase") { penErase(at(e)); return; }
-      PEN.cur.pts.push(at(e).map((v) => +v.toFixed(4)));
-      const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1, W = cv.width / dpr, p = PEN.cur.pts;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      penStroke(ctx, { ...PEN.cur, pts: p.slice(-2) }, W);
-    });
-    const end = () => { if (PEN.cur && PEN.cur !== "scroll") penSave(); PEN.cur = null; };
-    cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+    PEN.key = key; PEN.host = host; PEN.strokes = penLoad(key); PEN.cur = null;
+    if (!PEN.cv) {
+      const cv = document.createElement("canvas");
+      cv.className = "pen-layer"; cv.setAttribute("aria-hidden", "true");
+      document.body.appendChild(cv);
+      PEN.cv = cv; PEN.ctx = cv.getContext("2d", { desynchronized: true }) || cv.getContext("2d");
+      const at = (e) => { const r = penHost(); return [+((e.clientX - r.left) / r.width).toFixed(4), +((e.clientY - r.top) / r.width).toFixed(4)]; };
+      cv.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "pen" && !PEN.seenPen) { PEN.seenPen = true; try { localStorage.setItem("penSeen", "1"); } catch (err) {} }
+        if (e.pointerType === "touch" && (PEN.seenPen || PEN.penDown)) {   // finger (or palm): scroll, never ink
+          if (PEN.penDown) return;
+          PEN.scroll = { id: e.pointerId, y: e.clientY, v: 0, t: e.timeStamp };
+          cv.setPointerCapture(e.pointerId); return;
+        }
+        e.preventDefault();
+        cv.setPointerCapture(e.pointerId);
+        PEN.penDown = e.pointerType === "pen";
+        if (PEN.tool === "erase") { PEN.cur = "erase"; penErase(at(e)); return; }
+        const hl = PEN.tool === "hl";
+        PEN.cur = { c: hl ? "#FFD23F" : PEN.color, w: hl ? 16 : 2.4, a: hl ? 0.4 : 1, pts: [at(e)] };
+        PEN.strokes.push(PEN.cur); penQueue();
+      });
+      cv.addEventListener("pointermove", (e) => {
+        const S = PEN.scroll;
+        if (S && e.pointerId === S.id) {
+          const dy = S.y - e.clientY, dt = Math.max(1, e.timeStamp - S.t);
+          window.scrollBy(0, dy); S.v = 0.8 * (dy / dt) + 0.2 * S.v; S.y = e.clientY; S.t = e.timeStamp; return;
+        }
+        if (!PEN.cur) return;
+        const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+        if (PEN.cur === "erase") { evs.forEach((x) => penErase(at(x))); return; }
+        evs.forEach((x) => PEN.cur.pts.push(at(x)));
+        penQueue();
+      });
+      const end = (e) => {
+        const S = PEN.scroll;
+        if (S && e.pointerId === S.id) {                               // a little glide after a finger flick
+          PEN.scroll = null;
+          let v = S.v * 16;
+          const glide = () => { if (Math.abs(v) < 0.5 || PEN.scroll) return; window.scrollBy(0, v); v *= 0.93; requestAnimationFrame(glide); };
+          if (Math.abs(v) > 2) requestAnimationFrame(glide);
+          return;
+        }
+        if (PEN.cur && PEN.cur !== "erase") { const p = PEN.cur.pts; if (p.length > 2) PEN.cur.pts = p.filter((q, i) => i === 0 || i === p.length - 1 || Math.abs(q[0] - p[i - 1][0]) + Math.abs(q[1] - p[i - 1][1]) > 0.0008); }
+        if (PEN.cur) penSave();
+        PEN.cur = null; PEN.penDown = false; penQueue();
+      };
+      cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+    }
     penSize();
-    if (!penSetup.ro && window.ResizeObserver) { penSetup.ro = new ResizeObserver(() => penSize()); }
-    if (penSetup.ro) { penSetup.ro.disconnect(); penSetup.ro.observe(host); }
-    setTimeout(penSize, 600);                                         // diagrams and plots settle a moment later
+    setTimeout(penDraw, 600);                                         // diagrams and plots settle a moment later
   }
   function penErase(pt) {
-    const W = PEN.cv.getBoundingClientRect().width || 1, r = 14 / W, n = PEN.strokes.length;
-    PEN.strokes = PEN.strokes.filter((st) => !st.pts.some((q) => Math.hypot(q[0] - pt[0], q[1] - pt[1]) < r));
-    if (PEN.strokes.length !== n) { penSave(); penDraw(); }
+    const r = penHost(), rad = 14 / r.width, n = PEN.strokes.length;
+    PEN.strokes = PEN.strokes.filter((st) => !st.pts.some((q) => Math.hypot(q[0] - pt[0], q[1] - pt[1]) < rad));
+    if (PEN.strokes.length !== n) { penSave(); penQueue(); }
   }
   document.addEventListener("click", (e) => {
     if (!e.target.closest("[data-pen]")) return;
-    document.documentElement.classList.toggle("pen-on");
-    penSize();
+    penMode(!document.documentElement.classList.contains("pen-on"));
   });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.documentElement.classList.contains("pen-on")) document.documentElement.classList.remove("pen-on"); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.documentElement.classList.contains("pen-on")) penMode(false); });
 
   /* ------------------------------------------------------------- DocPage: sidebar + one section at a time */
   function textOf(blocks) {

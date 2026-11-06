@@ -21,10 +21,12 @@ HEAD = '''<!doctype html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>{title}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="stylesheet" href="assets/fx/fx.css">
-<link rel="stylesheet" href="assets/theme.css">
+<link rel="stylesheet" href="assets/brutal-kit.css">
+<link rel="stylesheet" href="assets/brutal-site.css">
+<link rel="stylesheet" href="assets/features.css">
 {extra_css}<script>try{{var h=document.documentElement,t=localStorage.getItem('theme');if(t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches)h.dataset.theme='dark';else h.dataset.theme='light';h.dataset.anim='off';var w=localStorage.getItem('wrapcode');if(w?w==='1':innerWidth<900)h.classList.add('wrap-code')}}catch(e){{}}</script>
 </head>
 <body>

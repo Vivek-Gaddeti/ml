@@ -1,0 +1,121 @@
+/* =====================================================================
+   Calm neo-brutalism, adapted to this site (loaded after style.css, fx.css and brutal-kit.css).
+   brutal-kit.css is the shared kit from Aptitude Hub; this file maps the site's own tokens and
+   classes onto it and strips the old soft look (round corners, soft shadows, gradients, glows).
+   ===================================================================== */
+
+/* ---- the site's tokens -> the kit's */
+:root {
+  --border: var(--line);
+  --radius: 0; --r-xs: 0; --r-sm: 0; --r-md: 0; --r-pill: 0;
+  --shadow: none;
+  --code-bg: var(--panel-2);
+  --node: var(--panel);
+  --node-stroke: var(--ink);
+  --hl: var(--f-yellow);
+  --ibeam: text;
+}
+:root[data-theme="dark"] { --border: var(--line); --code-bg: #171717; --node: var(--panel); --hl: #6b5a1e; }
+/* one accent on every page: raspberry (the page's own colour is kept only for its header icon) */
+:root.page-tinted { --accent: #D6245F; --accent-soft: #FFD6E2; --node-stroke: var(--ink); }
+:root[data-theme="dark"].page-tinted { --accent: #FF6B93; --accent-soft: #2E2025; }
+
+body { font-size: 16px; line-height: 1.55; }
+
+/* ---- nothing soft: square corners, no blurred shadows, no gradients or glows */
+*, *::before, *::after { border-radius: 0 !important; text-shadow: none !important; }
+*:not(.btn.primary):not(.btn-primary):not(.hero) { box-shadow: none !important; }
+.logo-wrap .logo, .brand .logo { background: var(--accent) !important; }
+.brand .logo::after, .d-shine, .d-glow, .d-confetti, .nav-pill.shine::after, .bar > span::after { display: none !important; }
+.bar > span[style*="width:100%"] { background: var(--green) !important; animation: none !important; }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+.topbar { backdrop-filter: none; background: var(--panel); }
+
+/* ---- type: one job per style */
+h1 { font: 900 clamp(1.9rem, 4vw, 2.8rem)/1.05 var(--display); text-transform: uppercase; letter-spacing: -.015em; }
+h2 { font: 800 1.35rem/1.25 var(--display); border-bottom: var(--bw) solid var(--line); }
+h3, h4 { font-family: var(--display); font-weight: 800; }
+.crumbs, .breadcrumb, th, .group-title, .sidebar .group-title { font-family: var(--mono) !important; font-size: 12px !important; letter-spacing: .06em; text-transform: uppercase; }
+code, pre, kbd { font-family: var(--mono); }
+pre code, .code-wrap code { border: 0; padding: 0; background: none; }
+.katex { font-family: KaTeX_Main, "Times New Roman", serif; }        /* maths keeps its own face */
+
+/* ---- borders: 2px quiet lines for containers, darker lines for things you can click */
+.card, .code-wrap, .table-wrap, .callout, details, .sidebar, .brief, .viz, .solve, .plots img, pre { border-width: var(--bw) !important; }
+.card, .code-wrap, .table-wrap, details { border-color: var(--line) !important; }
+.btn, .icon-btn, .gsearch-btn, select, input, textarea, .psel-btn, .chip { border: var(--bw) solid var(--line-control) !important; }
+.btn { font-family: var(--display); font-weight: 800; }
+.btn:hover { background: var(--panel-2); }
+
+/* the ONE loud thing: the page's main action */
+.btn.primary { font-weight: 900; color: #fff; background: var(--accent); border: var(--bw-loud) solid var(--ink) !important; box-shadow: var(--sh-loud) !important; }
+.btn.primary:hover { background: var(--accent); filter: brightness(1.06); }
+:root[data-theme="dark"] .btn.primary { color: var(--on-fill); }
+.btn.primary:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink) !important; }
+
+/* toggles: colour = meaning, on a flat fill with ink text */
+.btn.on-green { background: var(--green-soft); color: var(--text); border-color: var(--line-control) !important; }
+.btn.on-amber { background: var(--amber-soft); color: var(--text); border-color: var(--line-control) !important; }
+.btn.on-red   { background: var(--red-soft);   color: var(--text); border-color: var(--line-control) !important; }
+
+/* ---- header: active link = ink fill, page colours only on the icons */
+.topbar { border-bottom: var(--bw) solid var(--line); }
+.nav a { border: var(--bw) solid transparent; }
+.nav a.active, .nav a.active:hover { background: var(--ink) !important; color: var(--bg) !important; border-color: var(--ink); }
+.nav a.active svg { color: var(--bg) !important; }
+.nav-menu { border: var(--bw) solid var(--line-control) !important; }
+.brand-name { font-family: var(--display); font-weight: 900; }
+
+/* ---- sidebar: active item = ink fill */
+.sidebar { border-right: var(--bw) solid var(--line); }
+.sidebar a.item.active { background: var(--ink) !important; color: var(--bg) !important; }
+.sidebar a.item:hover { padding-left: .55rem; }
+
+/* ---- numbers and labels in Space Mono */
+.d-streak .sn, .nav-badge, .badge, .stat .n, .num, .count { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---- progress bars: square, 2px frame, flat fill */
+.bar { border: var(--bw) solid var(--line); background: var(--panel); }
+.bar > span { background: var(--accent); transition: width 150ms linear; }
+
+/* ---- links in running text: underlined */
+.content p a, .content li a, .page p a { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+/* ---- focus: 2px ink outline everywhere */
+:focus-visible { outline: var(--bw) solid var(--ink) !important; outline-offset: 2px; }
+
+/* ---- plots in dark mode keep their inverted look, but on a square frame */
+.plots img { border-style: solid; border-color: var(--line); }
+
+/* ---- motion: feedback only */
+:root *, :root *::before, :root *::after { transition-timing-function: linear; }
+
+/* ---- fixes found on screen */
+.d-aurora { display: none !important; }                              /* soft colour wash behind the page */
+.nav { flex-wrap: nowrap; gap: .15rem; }
+.nav a { font-size: .86rem; padding: .35rem .45rem; min-height: 38px; gap: .3rem; }
+.topbar { gap: .6rem; }
+.logo-ring { display: none; }
+.logo-wrap .logo { width: 34px; height: 34px; display: grid; place-items: center; border: var(--bw) solid var(--ink); color: #fff; font: 900 .8rem var(--display); }
+:root[data-theme="dark"] .logo-wrap .logo { color: var(--on-fill); }
+.logo-wrap { width: 34px; height: 34px; }
+.hello { display: none !important; }                                  /* decorative greeting: keep the header quiet */
+.topbar .icon-btn { width: 40px; height: 40px; min-width: 40px; }
+@media (max-width: 1300px) { .brand-name { display: none; } }
+@media (max-width: 1100px) { .nav a > span:not(.nav-badge) { display: none; } .nav a { padding: .4rem .5rem; } }
+.fx-slot { display: none !important; }                               /* effects switch: decorative motion is off in this style */
+/* phones: header links get their own row of icons under the buttons */
+@media (max-width: 640px) {
+  .sidebar { top: var(--top-h) !important; }
+  .topbar { flex-wrap: wrap; height: auto !important; min-height: 0; row-gap: 4px; padding: 6px .6rem 4px; }
+  .topbar .icon-btn { width: 38px; height: 38px; min-width: 38px; }
+  .brand { margin-right: auto; }
+  .nav { order: 10; flex: 1 1 100%; justify-content: space-between; }
+  .nav a { min-height: 40px; min-width: 40px; justify-content: center; }
+}
+/* segmented switches (dashboard views, list/roadmap): selected = ink fill, scroll sideways instead of wrapping */
+.view-switch { max-width: 100%; overflow-x: auto; border: var(--bw) solid var(--line-control) !important; padding: 0 !important; gap: 0 !important; background: var(--panel) !important; }
+.view-switch :is(a, button) { white-space: nowrap; display: inline-flex; align-items: center; gap: .4rem; min-height: 40px; padding: 0 .9rem; border: 0 !important; border-right: var(--bw) solid var(--line-control) !important; background: none !important; color: var(--text) !important; font-family: var(--display); font-weight: 700; }
+.view-switch :is(a, button):last-child { border-right: 0 !important; }
+.view-switch :is(a, button).on, .view-switch :is(a, button)[aria-selected="true"] { background: var(--ink) !important; color: var(--bg) !important; }
+.view-switch :is(a, button).on svg { color: var(--bg) !important; }
