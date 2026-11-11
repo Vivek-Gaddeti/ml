@@ -718,7 +718,7 @@
     bot: '<rect x="4" y="8" width="16" height="11.5" rx="3.2"/><path d="M12 4.5V8"/><circle cx="12" cy="3.6" r="1.1"/><path class="cur" d="M9 13v1.6M15 13v1.6"/>',
   };
   // label → [icon, hover motion]
-  const NAV_ICONS = { "Dashboard": ["hop", "hop"], "Foundations": ["sigma", "tilt"], "ML": ["chart", "grow"], "Core ML": ["chart", "grow"], "Classical ML": ["sigma", "tilt"], "Deep Learning": ["net", "wiggle"],
+  const NAV_ICONS = { "Home": ["hop", "hop"], "Foundations": ["sigma", "tilt"], "ML": ["chart", "grow"], "Core ML": ["chart", "grow"], "Classical ML": ["sigma", "tilt"], "Deep Learning": ["net", "wiggle"],
     "LLMs & Agents": ["chat", "sway"], "Practice": ["code", "blink"], "Revision": ["repeat", "spin"],
     "Math for ML": ["sigma", "tilt"], "Python for ML": ["snake", "sway"], "Statistics": ["chart", "grow"], "Transformers": ["layers", "hop"], "LLMs": ["chat", "sway"], "Agentic AI": ["bot", "blink"],
   };
@@ -826,22 +826,14 @@
     if (!h || h.dataset.active === active) return;                   // already built (it's built early, see the end of this file)
     h.dataset.active = active;
     h.className = "topbar";
-    const streak = Store.streak(), due = dueCount(), hr = new Date().getHours();
-    // greeting + logo colour follow the time of day
-    const greet = hr < 5 || hr >= 22 ? icon("moon") + " Late-night grind" : hr < 12 ? icon("sun") + " Good morning" : hr < 17 ? icon("cloud-sun") + " Good afternoon" : icon("sunset") + " Good evening";
-    const mood = hr < 5 || hr >= 22 ? "night" : hr < 12 ? "morning" : hr < 17 ? "day" : "evening";
-    const season = (() => { const d = new Date(), m = d.getMonth(), day = d.getDate();
-      return m === 9 ? "pumpkin" : m === 11 ? "snowflake" : m === 1 && day === 14 ? "heart" : m === 0 && day === 1 ? "party" : ""; })();
     h.innerHTML = `
       <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menu">${icon("menu")}</button>
-      <a class="brand" href="${S.home || "index.html"}"><span class="logo-wrap" data-mood="${mood}"><span class="logo">${S.logo || "DS"}</span><svg class="logo-ring" viewBox="0 0 36 36" aria-hidden="true"><rect class="tr" x="1.5" y="1.5" width="33" height="33" rx="11"/><rect class="fg" x="1.5" y="1.5" width="33" height="33" rx="11" pathLength="100" stroke-dasharray="0 100"/></svg>${season ? `<span class="season season-${season}" aria-hidden="true">${icon(season)}</span>` : ""}</span><span class="brand-name">${S.brand}</span></a>
-      <span class="hello">${greet}</span>
+      <a class="brand" href="${S.home || "index.html"}" aria-label="${S.brand}"><span class="logo">${S.logo || "DC"}<i>.</i></span><span class="brand-name">${S.brand}</span></a>
       <nav class="nav">${S.links.map(([href, label, sub], i) => {
         const on = href === active || (sub && sub.some(([x]) => x === active)), C = NAV_COLORS[i % NAV_COLORS.length];
-        return `<a href="${href}" class="${[on ? "active" : "", sub ? "has-menu" : ""].filter(Boolean).join(" ")}" title="${label}"${sub ? ` aria-haspopup="true" aria-expanded="false" data-menu="${i}"` : ""} style="--c:${C[0]}" data-ink="${C[1]}" data-ink-dark="${C[2]}">${navIcon(label)}<span>${label}</span>${sub ? `<svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>` : ""}${href === "revision.html" ? badgeHTML(due) : ""}</a>`;
+        return `<a href="${href}" class="${[on ? "active" : "", sub ? "has-menu" : ""].filter(Boolean).join(" ")}" title="${label}"${sub ? ` aria-haspopup="true" aria-expanded="false" data-menu="${i}"` : ""} style="--c:${C[0]}" data-ink="${C[1]}" data-ink-dark="${C[2]}">${navIcon(label)}<span>${label}</span>${sub ? `<svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>` : ""}</a>`;
       }).join("")}</nav>
       ${S.links.map(([, , sub], i) => sub ? `<div class="nav-menu" role="menu" data-menu="${i}" style="--c:${NAV_COLORS[i % NAV_COLORS.length][0]}" hidden>${sub.map(([href, label, note]) => `<a role="menuitem" href="${href}" class="${href === active ? "active" : ""}">${navIcon(label)}<span><b>${label}</b>${note ? `<small>${note}</small>` : ""}</span></a>`).join("")}</div>` : "").join("")}
-      ${streak > 0 ? `<span class="d-streak" title="${streak}-day study streak"><span class="f">${icon("flame")}</span><span class="sn">${streak}</span></span>` : ""}
       <span class="fx-slot"></span>
       <button class="icon-btn" id="focusBtn" title="Full screen" aria-label="Full screen">${icon("expand")}</button>
       <button class="icon-btn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle theme">${THEME_SVG}</button>`;
@@ -858,21 +850,14 @@
       if (document.body.classList.contains("sidebar-open") && !e.target.closest("#sidebar") && !e.target.closest("#menuBtn")) document.body.classList.remove("sidebar-open");
     });
     // bottom bar (shown by CSS on html.touch only): the six places a student goes most
-    const BB = [["index.html", "Home", "hop"], ["ml.html", "ML", "chart"], ["dl.html", "Deep Learning", "net"], ["llm.html", "LLMs", "chat"], ["practice.html", "Practice", "code"], ["revision.html", "Revision", "repeat"]];
-    const BB_NEAR = { "math.html": "index.html", "pyml.html": "index.html", "stats.html": "index.html", "classical.html": "ml.html", "transformers.html": "llm.html", "agents.html": "llm.html" };
+    const BB = [["index.html", "Home", "hop"], ["math.html", "Foundations", "sigma"], ["ml.html", "ML", "chart"], ["dl.html", "Deep Learning", "net"], ["transformers.html", "LLMs & Agents", "chat"]];
+    const BB_NEAR = { "pyml.html": "math.html", "stats.html": "math.html", "classical.html": "ml.html", "llm.html": "transformers.html", "agents.html": "transformers.html" };
     const bbOn = BB_NEAR[active] || active;
     document.querySelectorAll("nav.bbar").forEach((x) => x.remove());
     const bar = document.createElement("nav");
     bar.className = "bbar"; bar.setAttribute("aria-label", "Pages");
-    bar.innerHTML = BB.map(([href, label, ic]) => `<a href="${href}" class="${href === bbOn ? "on" : ""}"${href === bbOn ? ' aria-current="page"' : ""}><svg viewBox="0 0 24 24" aria-hidden="true">${NAV_SVG[ic]}</svg><span>${label}</span>${href === "revision.html" && due ? `<span class="n">${due > 99 ? "99+" : due}</span>` : ""}</a>`).join("");
+    bar.innerHTML = BB.map(([href, label, ic]) => `<a href="${href}" class="${href === bbOn ? "on" : ""}"${href === bbOn ? ' aria-current="page"' : ""}><svg viewBox="0 0 24 24" aria-hidden="true">${NAV_SVG[ic]}</svg><span>${label}</span></a>`).join("");
     document.body.appendChild(bar);
-    document.addEventListener("store:change", () => {
-      const lk = bar.querySelector('a[href="revision.html"]'), n = dueCount(); if (!lk) return;
-      let b = lk.querySelector(".n");
-      if (!n) { if (b) b.remove(); return; }
-      if (!b) { b = document.createElement("span"); b.className = "n"; lk.appendChild(b); }
-      b.textContent = n > 99 ? "99+" : n;
-    });
     navMenus(h);
     paintRing();
     // this page's own colour (from its header link) tints text selection, the cursor halo and the glow
@@ -883,15 +868,7 @@
       R.style.setProperty("--page-ink", act.dataset.ink); R.style.setProperty("--page-ink-dark", act.dataset.inkDark);
       R.classList.add("page-tinted");
     }
-    // keep the due badge and the logo ring up to date
-    document.addEventListener("store:change", () => {
-      paintRing();
-      const link = h.querySelector('.nav a[href="revision.html"]');
-      if (!link) return;
-      const n = dueCount(), b = link.querySelector(".nav-badge");
-      if (!n) { if (b) b.remove(); return; }
-      if (b) b.textContent = n > 99 ? "99+" : n; else link.insertAdjacentHTML("beforeend", badgeHTML(n));
-    });
+    document.addEventListener("store:change", paintRing);
   }
 
   /* ------------------------------------------------------------- Status buttons (shared UI) */
@@ -901,16 +878,13 @@
     const due = it.next ? relDay(it.next) : "";
     return `<div class="doc-actions${opts.compact ? " compact" : ""}" data-key="${key}">
       <button class="btn ${it.status === "done" ? "on-green" : ""}" data-act="done">${swapLabel([icon("circle") + " " + doneLabel, icon("check") + " " + (opts.doneOn || "Learned")], it.status === "done" ? 1 : 0)}</button>
-      <button class="btn ${it.status === "revise" ? "on-red" : ""}" data-act="revise" title="Mark for revision" aria-label="Mark for revision">${swapLabel([icon("repeat") + " Mark for revision", icon("repeat") + " Needs revision"], it.status === "revise" ? 1 : 0)}</button>
-      <button class="btn ${it.star ? "on-amber" : ""}" data-act="star" title="Bookmark" aria-label="Bookmark">${swapLabel([icon("star") + " Bookmark", icon("star-fill") + " Bookmarked"], it.star ? 1 : 0)}</button>
-      <span class="small muted due">${it.status && due ? "Next review: " + due : ""}</span>
     </div>`;
   }
   document.addEventListener("click", (e) => {
     const b = e.target.closest(".doc-actions [data-act]");
     if (!b) return;
     const bar = b.closest(".doc-actions"), key = bar.dataset.key, it = Store.item(key), act = b.dataset.act;
-    if (act === "done") { Store.setStatus(key, it.status === "done" ? null : "done"); toast(it.status === "done" ? "Unmarked" : "Nice! Added to your revision schedule"); }
+    if (act === "done") { Store.setStatus(key, it.status === "done" ? null : "done"); toast(it.status === "done" ? "Unmarked" : "Marked as learned"); }
     if (act === "revise") { Store.setStatus(key, it.status === "revise" ? (it.doneAt ? "done" : null) : "revise"); }
     if (act === "star") { Store.toggleStar(key); }
     // update the buttons in place (no re-render), so they keep their size and position; a page can show the
@@ -1115,7 +1089,7 @@
         <div class="doc-meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</div>
         ${window.BRIEFS && BRIEFS[key] ? `<div class="callout brief"><span class="label">${icon("bulb")} In plain English</span>${String(BRIEFS[key]).split(/\n\s*\n/).map((x) => `<p>${fmt(x.trim())}</p>`).join("")}</div>` : ""}
         <div class="doc-body">${renderBlocks(s.blocks)}</div>
-        <div class="doc-finish"><div class="doc-finish-t"><b>Finished this lesson?</b><div class="small muted">It comes back for review after 1, 3, 7… days.</div></div>${actionBar(key, cfg.actionOpts)}</div>
+        <div class="doc-finish"><div class="doc-finish-t"><b>Finished this lesson?</b></div>${actionBar(key, cfg.actionOpts)}</div>
         ${notesBox(key)}
         <div class="btn-row page-nav">
           ${prev ? `<a class="btn" href="#${prev.id}"><span class="small muted">← Previous</span><span>${esc(prev.title)}</span></a>` : "<span></span>"}

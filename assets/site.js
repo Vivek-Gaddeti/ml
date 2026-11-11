@@ -2,14 +2,14 @@
 window.SITE = {
   storeKey: "aihub:v1",                                              // all progress, notes and bookmarks
   prefix: "ai:",                                                     // in front of this site's own localStorage keys (the DSA site shares the browser's storage)
-  brand: "AI Study Hub",
-  logo: "AI",
+  brand: "Daily Checker",
+  logo: "DC",
   home: "index.html",
   mascot: "bot",                                                     // walks along the bottom of the sidebar as you progress
   ring: { prefixes: ["math:", "pyml:", "ml:", "dl:", "tf:", "llm:", "ag:", "prac:"], total: 255, label: "items done" },   // progress ring around the logo
   // [href, label] or [href, label, [[href, label, subtitle], …]] for a link with a small menu
   links: [
-    ["index.html", "Dashboard"],
+    ["index.html", "Home"],
     ["math.html", "Foundations", [
       ["math.html", "Math for ML", "Vectors, gradients, probability"],
       ["pyml.html", "Python for ML", "NumPy, pandas, plots, scikit-learn"],
@@ -25,8 +25,6 @@ window.SITE = {
       ["llm.html", "LLMs", "Training, decoding, prompting, RAG"],
       ["agents.html", "Agentic AI", "Tools, ReAct, memory, MCP, evals"],
     ]],
-    ["practice.html", "Practice"],
-    ["revision.html", "Revision"],
   ],
   // the doc pages: Store keys are "<kind>:<section id>", sections live in window[list]
   docs: [

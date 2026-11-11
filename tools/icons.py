@@ -1,27 +1,28 @@
-"""Draws the app icons (assets/icon-192.png, assets/icon-512.png): a white "AI" on the site's pink, with a black frame line.
+"""Draws the app icons (assets/icon-192.png, assets/icon-512.png): a black "DC" and a coral dot on yellow (same palette as the Patterns icons).
 No libraries needed.  Usage: python tools/icons.py"""
 import struct, zlib, os
 
 def png(path, n):
-    BG, W, K = (214, 36, 95), (255, 255, 255), (17, 17, 17)
+    Y, K, P = (255, 210, 63), (17, 17, 17), (255, 107, 107)
     u = n / 16.0                                   # the icon is designed on a 16 x 16 grid
-    def inA(gx, gy):                               # letter A: two slanted legs and a bar
-        if not (2.2 <= gy <= 12.8): return False
-        t = (gy - 2.2) / 10.6                      # 0 at the top, 1 at the bottom
-        cx = 5.4
-        half = 0.5 + t * 2.7
-        leg = 1.05
-        if abs(gx - (cx - half)) < leg / 2 + 0.3 or abs(gx - (cx + half)) < leg / 2 + 0.3: return True
-        return 8.6 <= gy <= 9.9 and abs(gx - cx) <= half
-    def inI(gx, gy):                               # letter I: bar with serifs
-        if 2.2 <= gy < 3.6 and 10.2 <= gx < 14: return True
-        if 11.4 <= gy < 12.8 and 10.2 <= gx < 14: return True
-        return 11.3 <= gx < 12.9 and 2.2 <= gy < 12.8
+    T = 1.7                                        # stroke thickness
+    RO, CY = 3.6, 7.4                              # letter radius and vertical centre
+    def inD(gx, gy):                               # D: stem + rounded bowl
+        if 1.2 <= gx < 1.2 + T and CY - RO <= gy < CY + RO: return True
+        if 1.2 <= gx < 4.2 and (CY - RO <= gy < CY - RO + T or CY + RO - T <= gy < CY + RO): return True
+        if gx >= 4.2:
+            d = ((gx - 4.2) ** 2 + (gy - CY) ** 2) ** .5
+            return RO - T <= d <= RO
+        return False
+    def inC(gx, gy):                               # C: ring open on the right
+        cx = 11.8
+        d = ((gx - cx) ** 2 + (gy - CY) ** 2) ** .5
+        return RO - T <= d <= RO and not (gx > cx + 1.0 and abs(gy - CY) < 2.2)
     def colour(x, y):
         gx, gy = x / u, y / u
-        if inA(gx, gy) or inI(gx, gy): return W
-        if min(gx, gy, 16 - gx, 16 - gy) < 0.35: return K
-        return BG
+        if inD(gx, gy) or inC(gx, gy): return K
+        if 13.2 <= gx < 14.8 and 12.0 <= gy < 13.6: return P        # the dot
+        return Y
     raw = b"".join(b"\x00" + bytes(c for x in range(n) for c in colour(x + .5, y + .5)) for y in range(n))
     chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
     with open(path, "wb") as f:

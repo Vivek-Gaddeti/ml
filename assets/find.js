@@ -13,13 +13,9 @@
   // everything you can jump to: [key in Store, kind, title, small text under it, link]
   const SUBS = {}; SITE.links.forEach(([href, label, sub]) => (sub || [[href, label, ""]]).forEach(([h, , note]) => (SUBS[h] = note)));
   const all = [
-    ["", "page", "Dashboard", "Your progress, streak and what's due", "index.html"],
+    ["", "page", "Home", "All subjects", "index.html"],
     ...SITE.docs.map((d) => ["", "page", d.title, SUBS[d.href] || "", d.href]),
-    ["", "page", "Practice", "All problems as a list", "practice.html#list"],
-    ["", "page", "Practice roadmap", "Practice topics as a map", "practice.html#roadmap"],
-    ["", "page", "Revision", "What's due for review", "revision.html"],
     ...SITE.docs.flatMap((d) => (PR.docs[d.kind] || []).map((s) => [d.kind + ":" + s.id, d.kind, s.title, s.group, d.href + "#" + s.id])),
-    ...PR.prac.map((p) => ["prac:" + p.id, "prac", p.t, p.cat, "practice.html#p/" + p.id, p.d]),
   ].map(([key, kind, title, sub, href, d]) => ({ key, kind, title, sub: sub || "", href, d, low: title.toLowerCase(), hay: (title + " " + (sub || "") + " " + KIND[kind] + " " + (d || "")).toLowerCase() }));
 
   // a title that starts with what you typed beats one that only contains it, and pages come first on a tie
@@ -73,7 +69,7 @@
     bg = document.createElement("div");
     bg.className = "fd-bg";
     bg.innerHTML = `<div class="fd" role="dialog" aria-label="Find anything">
-      <label class="fd-in">${ICO(LENS)}<input type="search" placeholder="Find a topic, section or practice problem…" aria-label="Find" autocomplete="off" spellcheck="false"><kbd>Esc</kbd></label>
+      <label class="fd-in">${ICO(LENS)}<input type="search" placeholder="Find a topic, section…" aria-label="Find" autocomplete="off" spellcheck="false"><kbd>Esc</kbd></label>
       <div class="fd-list" role="listbox"></div>
       <div class="fd-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Esc</kbd> close</span></div></div>`;
     document.body.appendChild(bg);

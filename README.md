@@ -1,7 +1,7 @@
-# AI Study Hub
+# Daily Checker
 
 One offline study website for Machine Learning, Deep Learning, Transformers, LLMs and Agentic AI. It is built on the same
-engine as the DSA + Python Study Hub. Open `index.html` (double-click) to start: it is the dashboard.
+engine as the DSA + Python Study Hub. Open `index.html` (double-click) to start: it is the reading home.
 
 | Page | What's inside |
 |---|---|

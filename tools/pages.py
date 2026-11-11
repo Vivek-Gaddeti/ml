@@ -10,7 +10,7 @@ DATA = os.path.join(ROOT, "data")
 SITE_JS = open(os.path.join(ROOT, "assets", "site.js"), encoding="utf-8").read()
 DOCS = re.findall(r'\{ kind: "(\w+)", list: "(\w+)", href: "([\w.-]+)", title: "([^"]+)"', SITE_JS)
 PRAC = sorted(f for f in os.listdir(os.path.join(DATA, "prac")) if f[0].isdigit()) if os.path.isdir(os.path.join(DATA, "prac")) else []
-BRAND = "AI Study Hub"
+BRAND = "Daily Checker"
 
 HEAD = '''<!doctype html>
 <html lang="en">
@@ -20,17 +20,18 @@ HEAD = '''<!doctype html>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#D6245F">
+<meta name="theme-color" content="#FFD23F">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>{title}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="stylesheet" href="assets/fx/fx.css">
 <link rel="stylesheet" href="assets/brutal-kit.css">
 <link rel="stylesheet" href="assets/brutal-site.css">
 <link rel="stylesheet" href="assets/features.css">
+<link rel="stylesheet" href="assets/patterns-look.css">
 {extra_css}<script>try{{var h=document.documentElement,t=localStorage.getItem('theme');if(t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches)h.dataset.theme='dark';else h.dataset.theme='light';h.dataset.anim='off';var tc=localStorage.getItem('ai:touch');if(tc?tc==='on':matchMedia('(pointer: coarse)').matches)h.classList.add('touch');var w=localStorage.getItem('wrapcode');if(w?w==='1':innerWidth<900)h.classList.add('wrap-code')}}catch(e){{}}</script>
 </head>
 <body>
@@ -56,7 +57,7 @@ def page(name, title, body, before, after, init, maths=False):
     extra = [s for s in TAIL if s not in scripts]
     if name == "practice.html": extra.insert(0, "assets/practice.js")
     if name == "revision.html": extra.insert(0, "assets/revision.js")
-    if name == "index.html": extra.insert(0, "assets/dashboard.js")
+    if name == "index.html": extra.insert(0, "assets/home.js")
     extra.insert(0, "assets/py.js")                    # before the page's own script: Practice uses it when it first draws
     h += "".join(f'<script src="{s}"></script>\n' for s in extra)
     h += "</body>\n</html>\n"
@@ -69,7 +70,7 @@ def doc_files(kind):
     return ["data/" + f for f in brief + files]
 
 
-page("index.html", f"Dashboard · {BRAND}", PAGE, [], ["data/progress.js"], 'topbar("index.html");')
+page("index.html", f"Home · {BRAND}", PAGE, [], ["data/progress.js"], 'topbar("index.html");')
 for kind, lst, href, title in DOCS:
     page(href, f"{title} · {BRAND}", DOC, ["data/outmap.js"], CODE + doc_files(kind),
          f'topbar("{href}");\n  docPage("{kind}");', maths=True)
