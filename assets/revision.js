@@ -45,7 +45,7 @@
           <td class="small">${ago(r.it.lastReview || r.it.doneAt)}</td>
           <td class="small">${r.it.status ? (Store.isDue(r.it) ? '<span class="badge purple">due now</span>' : relDay(r.it.next)) : "—"}</td>
           <td>${r.it.status ? level(r.it.level) : ""}</td>
-          <td><div class="btn-row">${r.it.status ? `<button class="btn sm on-green" data-rev="${r.key}" data-ok="1" title="Remembered — push next review further">${icon("check")} Got it</button><button class="btn sm on-red" data-rev="${r.key}" data-ok="0" title="Forgot — review again tomorrow">${icon("x")} Forgot</button>` : ""}</div></td></tr>`).join("");
+          <td><div class="btn-row"><button class="btn sm" data-sketch-rev="${esc(r.key)}" data-t="${esc(r.title)}" title="Draw it from memory">${icon("pencil")} Sketch</button>${r.it.status ? `<button class="btn sm on-green" data-rev="${r.key}" data-ok="1" title="Remembered — push next review further">${icon("check")} Got it</button><button class="btn sm on-red" data-rev="${r.key}" data-ok="0" title="Forgot — review again tomorrow">${icon("x")} Forgot</button>` : ""}</div></td></tr>`).join("");
       h += `</tbody></table></div>`;
     }
 
@@ -57,6 +57,7 @@
     main.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => { tab = b.dataset.tab; try { sessionStorage.setItem(lsKey("rev:tab"), tab); } catch (e) {} render(); }));
     $("#typeF").onchange = (e) => { typeF = e.target.value; render(); };
     main.querySelectorAll("[data-rev]").forEach((b) => (b.onclick = () => { Store.review(b.dataset.rev, b.dataset.ok === "1"); toast(b.dataset.ok === "1" ? "Great — next review pushed further out" : "No worries — it'll come back tomorrow"); render(); }));
+    main.querySelectorAll("[data-sketch-rev]").forEach((b) => (b.onclick = () => window.openScratchSheet && openScratchSheet({ key: "rev:" + b.dataset.sketchRev, title: b.dataset.t })));
     const rb = $("#randBtn");
     if (rb) rb.onclick = () => {
       const r = pool[Math.floor(Math.random() * pool.length)], p = r.p;

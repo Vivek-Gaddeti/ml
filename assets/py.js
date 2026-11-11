@@ -328,7 +328,7 @@ def _site_run(src, stdin, pre, after):
         <button type="button" class="btn sm" data-r="stop" title="Stop the program" hidden>${ICO(I.stop)}<span>Stop</span></button>
         ${extra}
         <label class="run-stdin-tog small muted"><input type="checkbox" data-r="stdin"> Input</label>
-        <span class="run-status small"></span>${hint ? `<span class="run-hint small muted"><kbd>Ctrl</kbd> <kbd>Enter</kbd></span>` : ""}
+        <span class="run-status small"></span>${hint ? `<span class="run-hint kbd-hint small muted"><kbd>Ctrl</kbd> <kbd>Enter</kbd></span>` : ""}
       </div>
       <textarea class="run-stdin" rows="2" placeholder="Text for input(), one line per call" spellcheck="false" hidden></textarea>
       <div class="run-out" hidden></div>`;

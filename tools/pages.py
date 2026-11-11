@@ -19,6 +19,10 @@ HEAD = '''<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#D6245F">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>{title}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap">
@@ -27,7 +31,7 @@ HEAD = '''<!doctype html>
 <link rel="stylesheet" href="assets/brutal-kit.css">
 <link rel="stylesheet" href="assets/brutal-site.css">
 <link rel="stylesheet" href="assets/features.css">
-{extra_css}<script>try{{var h=document.documentElement,t=localStorage.getItem('theme');if(t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches)h.dataset.theme='dark';else h.dataset.theme='light';h.dataset.anim='off';var w=localStorage.getItem('wrapcode');if(w?w==='1':innerWidth<900)h.classList.add('wrap-code')}}catch(e){{}}</script>
+{extra_css}<script>try{{var h=document.documentElement,t=localStorage.getItem('theme');if(t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches)h.dataset.theme='dark';else h.dataset.theme='light';h.dataset.anim='off';var tc=localStorage.getItem('ai:touch');if(tc?tc==='on':matchMedia('(pointer: coarse)').matches)h.classList.add('touch');var w=localStorage.getItem('wrapcode');if(w?w==='1':innerWidth<900)h.classList.add('wrap-code')}}catch(e){{}}</script>
 </head>
 <body>
 <header id="topbar"></header>
@@ -45,7 +49,7 @@ CODE = ["assets/glossary.js", "assets/viz.js"] + ["assets/viz/" + f for f in VIZ
 
 def page(name, title, body, before, after, init, maths=False):
     # before: loaded ahead of common.js (KaTeX, outmap), after: data files, init: inline script
-    scripts = ["assets/site.js"] + ([KATEX_JS] if maths else []) + before + ["assets/common.js"] + after
+    scripts = ["assets/site.js"] + ([KATEX_JS] if maths else []) + before + ["assets/common.js", "assets/scratch.js"] + after
     h = HEAD.format(title=title, extra_css=KATEX_CSS if maths else "") + body
     h += "".join(f'<script src="{s}"></script>\n' for s in scripts)
     h += f"<script>\n  {init}\n</script>\n" if "\n" in init else f"<script>{init}</script>\n"

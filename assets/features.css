@@ -1,6 +1,6 @@
 /* =====================================================================
    Lesson features in the square bold style (loaded after brutal-kit.css and brutal-site.css):
-   contents list, finish card, Wrap switch, phone bottom bar, pen notes, dashboard "Up next".
+   contents list, finish card, Wrap switch, phone bottom bar, sketch pad, dashboard "Up next".
    Also tightens the spacing so pages need less scrolling.
    ===================================================================== */
 
@@ -35,8 +35,7 @@ code, pre, .code-lines, .code-lines *, kbd { font-variant-ligatures: none; }
 .doc-actions.compact .btn, .pen-btn { width: 42px; height: 42px; min-height: 42px; padding: 0; justify-content: center; overflow: hidden; }
 .doc-actions.compact .btn .swap { font-size: 0; }
 .doc-actions.compact .btn svg, .pen-btn svg { width: 18px; height: 18px; }
-.pen-btn svg, .pen-bar svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-html.pen-on .pen-btn { background: var(--ink) !important; color: var(--bg) !important; }
+.pen-btn svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .doc-meta { display: flex; flex-wrap: wrap; gap: .35rem; margin: .5rem 0 .9rem; }
 .doc-meta span { font: 700 11.5px/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: .35rem .5rem; border: var(--bw) solid var(--line); background: var(--panel); }
 
@@ -80,22 +79,6 @@ html.pen-on .pen-btn { background: var(--ink) !important; color: var(--bg) !impo
 }
 .d-resume { left: auto !important; right: 4.6rem; }
 
-/* ---- pen notes: a see-through layer the size of the screen (redrawn as you scroll) */
-.pen-layer { position: fixed; left: 0; top: 0; z-index: 30; pointer-events: none; }
-html.pen-on .pen-layer { pointer-events: auto; touch-action: none; cursor: crosshair; }
-html.pen-on, html.pen-on body { overscroll-behavior: none; }
-.pen-bar { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 70; display: none; flex-direction: column; align-items: stretch; gap: 4px; padding: 5px; width: max-content; background: var(--panel); border: var(--bw-loud) solid var(--ink); max-width: calc(100vw - 20px); flex-wrap: wrap; justify-content: center; }
-html.pen-on .pen-bar { display: flex; }
-.pen-tools { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; justify-content: center; }
-html.pen-on .mobile-nav { display: none; }
-.pen-bar button { display: grid; place-items: center; min-width: 44px; height: 44px; border: var(--bw) solid transparent; background: transparent; color: var(--text); cursor: pointer; font: 800 .9rem var(--display); }
-.pen-bar button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
-.pen-bar .sw { width: 28px; height: 28px; min-width: 28px; margin: 0 3px; border: var(--bw) solid var(--ink); }
-.pen-bar .sw[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 2px; }
-.pen-bar .sep { width: 2px; height: 26px; background: var(--line); margin: 0 3px; }
-.pen-bar .done { border-color: var(--line-control); padding: 0 14px; }
-.pen-hint { text-align: center; padding: .25rem .5rem; font: 700 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; background: var(--ink); color: var(--bg); }
-
 /* ---- dashboard */
 .card.dash-next { margin-bottom: 1rem; border: var(--bw-loud) solid var(--ink) !important; box-shadow: var(--sh-hero) !important; }
 .dash-next h2 { margin: .15rem 0 .3rem; font-size: 1.4rem; border: 0; padding: 0; }
@@ -108,4 +91,104 @@ details.hm-fold[open] > summary { margin-bottom: .7rem; }
 .dash-course .row-between { flex-wrap: wrap; align-items: baseline; gap: 0 .5rem; }
 .dash-course .ct-n { white-space: nowrap; }
 .nc-timer.paused .t { color: var(--muted); }
-.pen-bar.pen-bar.pen-bar { box-shadow: var(--sh-loud) !important; }
+
+/* =====================================================================
+   Tablet + stylus port (from the Patterns site): scratch pad, bottom bar, touch sizing.
+   assets/scratch.js builds the pad; common.js adds html.touch, nav.bbar and the Sketch button.
+   ===================================================================== */
+
+/* ---- scratch pad (assets/scratch.js) */
+.sp { border: var(--bw) solid var(--ink); background: var(--panel); color: var(--text); display: flex; flex-direction: column; user-select: none; -webkit-user-select: none; text-align: left; }
+.sp.fill { height: 100%; border: 0; flex: 1; min-height: 0; }
+.sp-bar, .sp-foot { display: flex; align-items: center; gap: 4px; padding: 6px; background: var(--panel-2); }
+.sp-bar { border-bottom: var(--bw) solid var(--ink); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.sp-bar::-webkit-scrollbar { display: none; }
+.sp-foot { border-top: var(--bw) solid var(--ink); font: 12.5px var(--mono); color: var(--muted); flex-wrap: nowrap; padding: 4px 8px; }
+.sp-foot .sp-status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-t { min-width: 40px; height: 40px; padding: 0 9px; display: inline-flex; align-items: center; justify-content: center; border: var(--bw) solid var(--ink); background: var(--panel); color: var(--text); cursor: pointer; font: 800 13px var(--display); touch-action: manipulation; white-space: nowrap; flex: none; box-shadow: none; }
+.sp-t svg { width: 19px; height: 19px; }
+.sp-t[aria-pressed="true"] { background: var(--f-yellow); color: #000; }
+.sp-t[hidden] { display: none; }
+.sp-foot .sp-t { height: 36px; min-width: 0; font-size: 12.5px; }
+.sp-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--ink); display: block; }
+.sp-sep { display: none; }
+.sp-grow { flex: 1; min-width: 4px; }
+.sp-area { position: relative; min-height: 160px; background-color: var(--panel); background-image: radial-gradient(circle, color-mix(in srgb, var(--muted) 40%, transparent) 1px, transparent 1.4px); background-size: 22px 22px; }
+.sp.fill .sp-area, .sp.full .sp-area { flex: 1; height: auto !important; min-height: 0; }
+.sp-area canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; display: block; }
+.sp-hint { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; color: var(--muted); font: 700 15px var(--display); }
+.sp-hint[hidden] { display: none; }
+.sp.full { position: fixed; inset: 0; z-index: 140; border: 0; height: auto; }
+body.sp-lock { overflow: hidden; }
+.pad-host { display: flex; flex-direction: column; min-height: 0; }
+.scratch-box .body { padding: 0; }
+.scratch-box .pad-host { border-top: var(--bw) solid var(--ink); }
+
+/* docked pad: bottom in portrait, right side in landscape (the writing hand rests there) */
+body { padding-bottom: var(--bb, 0px); }
+.sp-sheet { position: fixed; z-index: 60; left: 0; right: 0; bottom: var(--bb, 0px); height: 46vh; display: flex; flex-direction: column; background: var(--panel); border-top: var(--bw-loud) solid var(--ink); }
+.sp-sheet-b { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+body.sheet-open { padding-bottom: calc(46vh + var(--bb, 0px)); }
+@media (orientation: landscape) and (min-width: 900px) {
+  .sp-sheet { left: auto; top: 0; bottom: 0; width: 46vw; height: auto; border-top: 0; border-left: var(--bw-loud) solid var(--ink); }
+  body.sheet-open { padding-bottom: var(--bb, 0px); padding-right: 46vw; }
+}
+/* while the pad is open the page has about half the width: one column, the contents list becomes a drawer */
+body.sheet-open .layout { grid-template-columns: minmax(0, 1fr); }
+body.sheet-open .menu-btn { display: inline-block; }
+body.sheet-open .sidebar { position: fixed; left: 0; top: var(--top-h); width: 290px; z-index: 40; transform: translateX(-100%); transition: transform .2s; }
+body.sheet-open.sidebar-open .sidebar { transform: none; }
+body.sheet-open .content, body.sheet-open .page { padding-left: 1rem; padding-right: 1rem; }
+body.sheet-open .grid, body.sheet-open .cols-2, body.sheet-open .cols-3, body.sheet-open .dash { grid-template-columns: minmax(0, 1fr); }
+body.sheet-open .content.has-toc { display: block; max-width: none; }
+body.sheet-open .toc-box { position: static; }
+
+/* floating Sketch button (lesson pages) */
+.fab { display: none; position: fixed; right: 16px; bottom: calc(var(--bb, 0px) + 16px); z-index: 58; height: 54px; padding: 0 18px; align-items: center; gap: 8px; border: var(--bw-loud) solid var(--ink); background: var(--f-yellow); color: #000; font: 800 15px var(--display); box-shadow: var(--sh-loud); cursor: pointer; touch-action: manipulation; }
+.fab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+html.touch .fab { display: inline-flex; }
+body.sheet-open .fab { display: none; }
+html.touch .d-top, html.touch .d-resume { bottom: calc(var(--bb, 0px) + 16px) !important; }
+
+/* ---- bottom navigation (touch screens) */
+.bbar { display: none; }
+html.touch { --bb: 62px; }
+html.touch .bbar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); position: fixed; left: 0; right: 0; bottom: 0; height: 62px; z-index: 55; background: var(--panel); border-top: var(--bw-loud) solid var(--ink); }
+.bbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text); font: 800 11.5px var(--display); border-right: 1px solid var(--line); position: relative; touch-action: manipulation; min-width: 0; }
+.bbar a > span:not(.n) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+.bbar a:last-child { border-right: 0; }
+.bbar a.on { background: var(--f-yellow); color: #000; }
+.bbar svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.bbar .n { position: absolute; top: 5px; left: calc(50% + 8px); min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; background: var(--f-pink); color: #000; border: 1.5px solid var(--ink); font: 700 11px var(--mono); }
+html.touch .topbar .nav a { display: none; }
+html.touch .mobile-nav { display: none !important; }
+html.touch body.has-mobile-nav { padding-bottom: var(--bb); }
+html.touch .toast { bottom: calc(var(--bb, 0px) + 20px); }
+
+/* ---- touch sizing: applies only when <html class="touch"> */
+html.touch body { font-size: 16px; }
+html.touch * { -webkit-tap-highlight-color: transparent; }
+html.touch .btn { min-height: 46px; touch-action: manipulation; }
+html.touch .btn.sm { min-height: 44px; }
+html.touch .btn:hover { transform: none; }
+html.touch .icon-btn { min-width: 44px; min-height: 44px; }
+html.touch kbd, html.touch .kbd-hint { display: none !important; }
+html.touch input:not([type="checkbox"]):not([type="radio"]), html.touch select, html.touch textarea { font-size: 16px; }
+html.touch input:not([type="checkbox"]):not([type="radio"]), html.touch select { min-height: 46px; }
+html.touch input[type="checkbox"], html.touch input[type="radio"] { width: 28px; height: 28px; position: relative; }
+html.touch input[type="checkbox"]::before, html.touch input[type="radio"]::before { content: ""; position: absolute; inset: -8px; }
+html.touch .sidebar .item, html.touch .toc-list button, html.touch .nav-menu a { min-height: 46px; }
+html.touch summary { min-height: 48px; display: flex; align-items: center; }
+html.touch .table-wrap td, html.touch .table-wrap th { padding-top: 10px; padding-bottom: 10px; }
+html.touch .table-wrap td .btn { margin: 2px 0; }
+html.touch .btn-row { gap: 8px; }
+.seg-row { display: flex; gap: 6px; margin-top: .5rem; }
+.seg-row .btn { flex: 1; }
+.seg-row .btn[aria-pressed="true"] { background: var(--f-yellow); color: #000; }
+html.touch .sp-t { min-width: 46px; height: 46px; font-size: 14px; }
+html.touch .sp-bar .sp-t { min-width: 37px; width: 37px; height: 44px; padding: 0; }
+html.touch .sp-bar .sp-t[data-c] { min-width: 32px; width: 32px; }
+html.touch .sp-foot .sp-t { height: 38px; font-size: 13px; }
+@media (min-width: 700px) { html.touch .sp:not(.fill) .sp-bar .sp-t, html.touch .sp.full .sp-bar .sp-t { min-width: 46px; width: 46px; } }
+/* code, equations and tables scroll inside their own box, never the page */
+pre, .katex-display, .table-wrap { max-width: 100%; overflow-x: auto; }

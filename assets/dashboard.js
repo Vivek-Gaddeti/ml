@@ -221,9 +221,11 @@
     if (pop === kind) { closePop(); return; }
     pop = kind;
     el.innerHTML = kind === "help"
-      ? `<div class="dash-h">How to use this site</div><ol class="clean">${model(cur).help.map((x) => `<li>${x}</li>`).join("")}</ol><p class="small muted">Press <kbd>Ctrl</kbd> <kbd>K</kbd> to find anything, or <kbd>?</kbd> for all keyboard shortcuts.</p>`
+      ? `<div class="dash-h">How to use this site</div><ol class="clean">${model(cur).help.map((x) => `<li>${x}</li>`).join("")}</ol><p class="small muted kbd-hint">Press <kbd>Ctrl</kbd> <kbd>K</kbd> to find anything, or <kbd>?</kbd> for all keyboard shortcuts.</p>`
       : `<div class="dash-h">Your progress</div><p class="small muted">Your progress, notes and bookmarks are saved only in this browser (separately from the DSA site). Export it now and then, and import it on another device.</p>
-         <div class="btn-row"><button type="button" class="btn primary" data-do="export">${icon("download")} Export</button><label class="btn">${icon("upload")} Import<input type="file" data-do="import" accept=".json,application/json" hidden></label><button type="button" class="btn on-red" data-do="reset">Reset</button></div>`;
+         <div class="btn-row"><button type="button" class="btn primary" data-do="export">${icon("download")} Export</button><label class="btn">${icon("upload")} Import<input type="file" data-do="import" accept=".json,application/json" hidden></label><button type="button" class="btn on-red" data-do="reset">Reset</button></div>
+         <div class="dash-h mt-4">Touch layout</div><p class="small muted">Bottom bar, bigger buttons and a scratch pad on every page. Auto turns it on for tablets and phones.</p>
+         <div class="seg-row" role="group" aria-label="Touch layout">${[["", "Auto"], ["on", "On"], ["off", "Off"]].map(([v, l]) => `<button type="button" class="btn sm" data-touch="${v}" aria-pressed="${(Store.get("touch") || "") === v}">${l}</button>`).join("")}</div>`;
     const r = btn.getBoundingClientRect(), mr = main.getBoundingClientRect();
     el.style.top = r.bottom - mr.top + 8 + "px"; el.style.right = mr.right - r.right + "px";
     el.hidden = false;
@@ -237,6 +239,8 @@
   main.addEventListener("click", (e) => {
     const sw = e.target.closest("[data-site]");
     if (sw && sw.dataset.site !== cur) { cur = sw.dataset.site; showCats = false; try { sessionStorage.setItem(lsKey("dash:view"), cur); } catch (x) {} closePop(); render(); if (window.FX && FX.rise) FX.rise(); return; }
+    const tp = e.target.closest("[data-touch]");
+    if (tp) { Store.set("touch", tp.dataset.touch || undefined); location.reload(); return; }
     const p = e.target.closest("[data-pop]");
     if (p) { e.stopPropagation(); openPop(p.dataset.pop, p); return; }
     if (e.target.closest("[data-cats]")) { showCats = !showCats; render(); return; }

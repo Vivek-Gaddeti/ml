@@ -109,6 +109,9 @@
       try { localStorage.setItem(this.key, JSON.stringify(this.d)); } catch (e) {}
       document.dispatchEvent(new CustomEvent("store:change"));
     },
+    // small key/value settings kept next to (not inside) the progress data, e.g. "touch", "padFinger"
+    get(k) { try { const v = localStorage.getItem(lsKey(k)); return v === null ? undefined : v; } catch (e) { return undefined; } },
+    set(k, v) { try { if (v === undefined || v === null || v === false) localStorage.removeItem(lsKey(k)); else localStorage.setItem(lsKey(k), String(v)); } catch (e) {} },
     item(k) { return this.load().items[k] || {}; },
     patch(k, p) {
       const d = this.load();
@@ -724,6 +727,10 @@
   const NAV_COLORS = [["#4f7cff", "#4268d6", "#6d93ff"], ["#1fae7a", "#177f59", "#2fc28d"], ["#8b6cf0", "#785dce", "#9d84f3"],
     ["#ec8a4f", "#a35f37", "#ef9a65"], ["#e2609a", "#b34c7a", "#e874a8"], ["#22a3b6", "#197a88", "#33b5c8"], ["#d3a226", "#8a6a10", "#e0b445"]];
   const navIcon = (label) => { const ic = NAV_ICONS[label.replace("↗", "").trim()]; return ic ? `<svg class="ni ni-${ic[1]}" viewBox="0 0 24 24" aria-hidden="true">${NAV_SVG[ic[0]]}</svg>` : ""; };
+  // touch layout: Settings (dashboard gear) can force it On or Off, otherwise it follows the device (coarse pointer = tablet / phone)
+  const touchPref = Store.get("touch");
+  window.isTouch = touchPref ? touchPref === "on" : matchMedia("(pointer: coarse)").matches;
+  document.documentElement.classList.toggle("touch", window.isTouch);
   const dueCount = () => Object.values(Store.load().items).filter((it) => Store.isDue(it)).length;
   const badgeHTML = (n) => (n ? `<span class="nav-badge pulse">${n > 99 ? "99+" : n}</span>` : "");
   const THEME_SVG = (() => {
@@ -849,6 +856,22 @@
     mb.onclick = () => document.body.classList.toggle("sidebar-open");
     document.addEventListener("click", (e) => {
       if (document.body.classList.contains("sidebar-open") && !e.target.closest("#sidebar") && !e.target.closest("#menuBtn")) document.body.classList.remove("sidebar-open");
+    });
+    // bottom bar (shown by CSS on html.touch only): the six places a student goes most
+    const BB = [["index.html", "Home", "hop"], ["ml.html", "ML", "chart"], ["dl.html", "Deep Learning", "net"], ["llm.html", "LLMs", "chat"], ["practice.html", "Practice", "code"], ["revision.html", "Revision", "repeat"]];
+    const BB_NEAR = { "math.html": "index.html", "pyml.html": "index.html", "stats.html": "index.html", "classical.html": "ml.html", "transformers.html": "llm.html", "agents.html": "llm.html" };
+    const bbOn = BB_NEAR[active] || active;
+    document.querySelectorAll("nav.bbar").forEach((x) => x.remove());
+    const bar = document.createElement("nav");
+    bar.className = "bbar"; bar.setAttribute("aria-label", "Pages");
+    bar.innerHTML = BB.map(([href, label, ic]) => `<a href="${href}" class="${href === bbOn ? "on" : ""}"${href === bbOn ? ' aria-current="page"' : ""}><svg viewBox="0 0 24 24" aria-hidden="true">${NAV_SVG[ic]}</svg><span>${label}</span>${href === "revision.html" && due ? `<span class="n">${due > 99 ? "99+" : due}</span>` : ""}</a>`).join("");
+    document.body.appendChild(bar);
+    document.addEventListener("store:change", () => {
+      const lk = bar.querySelector('a[href="revision.html"]'), n = dueCount(); if (!lk) return;
+      let b = lk.querySelector(".n");
+      if (!n) { if (b) b.remove(); return; }
+      if (!b) { b = document.createElement("span"); b.className = "n"; lk.appendChild(b); }
+      b.textContent = n > 99 ? "99+" : n;
     });
     navMenus(h);
     paintRing();
@@ -977,150 +1000,24 @@
     document.querySelectorAll("[data-wrap]").forEach((x) => x.setAttribute("aria-pressed", on));
   });
 
-  /* ------------------------------------------------------------- pen notes: write or draw on a lesson
-     One see-through canvas the size of the SCREEN (a page-sized canvas is too big for tablets and gets blurred
-     or shifted), redrawn as you scroll. Ink is stored per lesson, relative to the lesson column, in this browser.
-     With a stylus: the pen writes, a finger scrolls, and touches while the pen is down are ignored (palm). */
-  const PEN_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16Z"/><path d="M14 6l3 3"/></svg>`;
-  const PEN = { key: null, strokes: [], tool: "pen", color: "#D6245F", cv: null, ctx: null, host: null, cur: null, penDown: false, raf: 0,
-    seenPen: (() => { try { return localStorage.getItem("penSeen") === "1"; } catch (e) { return false; } })(),
-    scroll: null };
-  const penLoad = (k) => { try { return JSON.parse(localStorage.getItem(lsKey("pen:" + k)) || "[]"); } catch (e) { return []; } };
-  const penSave = () => { try { localStorage.setItem(lsKey("pen:" + PEN.key), JSON.stringify(PEN.strokes)); } catch (e) {} };
-  function penBar() {
-    let bar = document.querySelector(".pen-bar");
-    if (bar) return bar;
-    const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
-    bar = document.createElement("div");
-    bar.className = "pen-bar"; bar.setAttribute("role", "toolbar"); bar.setAttribute("aria-label", "Pen tools");
-    bar.innerHTML = `<div class="pen-hint">Pen writes · one finger scrolls</div><div class="pen-tools"><button type="button" data-tool="pen" aria-pressed="true" aria-label="Pen">${sv('<path d="M4 20l4-1 11-11-3-3L5 16Z"/>')}</button>
-      <button type="button" data-tool="hl" aria-pressed="false" aria-label="Highlighter">${sv('<path d="M9 15l-4 4h6l1-1M9 15l8-8 3 3-8 8Z"/>')}</button>
-      <button type="button" data-tool="erase" aria-pressed="false" aria-label="Eraser">${sv('<path d="M8 20h12M5 15l9-9 5 5-8 8H8Z"/>')}</button>
-      <span class="sep"></span>
-      <button type="button" class="sw" data-color="#D6245F" aria-pressed="true" aria-label="Raspberry ink" style="background:#D6245F"></button>
-      <button type="button" class="sw" data-color="#2457C5" aria-pressed="false" aria-label="Blue ink" style="background:#2457C5"></button>
-      <button type="button" class="sw" data-color="#22121A" aria-pressed="false" aria-label="Black ink" style="background:#22121A"></button>
-      <span class="sep"></span>
-      <button type="button" data-pa="undo" aria-label="Undo">${sv('<path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"/>')}</button>
-      <button type="button" data-pa="clear" aria-label="Clear this lesson's drawing">${sv('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>')}</button>
-      <button type="button" class="done" data-pa="done">Done</button></div>`;
-    document.body.appendChild(bar);
-    bar.addEventListener("click", (e) => {
-      const t = e.target.closest("button");
-      if (!t) return;
-      if (t.dataset.tool) { PEN.tool = t.dataset.tool; bar.querySelectorAll("[data-tool]").forEach((x) => x.setAttribute("aria-pressed", x === t)); }
-      if (t.dataset.color) { PEN.color = t.dataset.color; bar.querySelectorAll("[data-color]").forEach((x) => x.setAttribute("aria-pressed", x === t)); if (PEN.tool === "erase") bar.querySelector('[data-tool="pen"]').click(); }
-      if (t.dataset.pa === "undo") { PEN.strokes.pop(); penSave(); penDraw(); }
-      if (t.dataset.pa === "clear" && PEN.strokes.length && confirm("Clear everything you drew on this lesson?")) { PEN.strokes = []; penSave(); penDraw(); }
-      if (t.dataset.pa === "done") penMode(false);
-    });
-    return bar;
-  }
-  function penMode(on) {
-    document.documentElement.classList.toggle("pen-on", on);
-    if (on) { penBar(); penSize(); }
-  }
-  // the canvas covers the screen; the drawing is clipped to the lesson column and kept under the header
-  function penSize() {
-    const cv = PEN.cv;
-    if (!cv) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2), w = innerWidth, h = innerHeight;
-    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
-      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-      cv.style.width = w + "px"; cv.style.height = h + "px";
+  /* ------------------------------------------------------------- Sketch: the pad lives in assets/scratch.js (docked sheet) */
+  const SKETCH_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1L19 8l-3-3L5 16l-1 4z"/><path d="M14 7l3 3"/></svg>`;
+  function sketchFab(key, title) {
+    let b = document.querySelector(".fab.sketch-fab");
+    if (!b) {
+      b = document.createElement("button");
+      b.type = "button"; b.className = "fab sketch-fab"; b.innerHTML = SKETCH_SVG + " Sketch";
+      b.setAttribute("aria-label", "Sketch on a scratch pad");
+      document.body.appendChild(b);
+      b.onclick = () => window.openScratchSheet && openScratchSheet(b._opt);
     }
-    penDraw();
-  }
-  const penHost = () => PEN.host.getBoundingClientRect();
-  function penPath(ctx, st, r) {
-    const p = st.pts, X = (q) => r.left + q[0] * r.width, Y = (q) => r.top + q[1] * r.width;
-    ctx.globalAlpha = st.a; ctx.strokeStyle = st.c; ctx.lineWidth = st.w; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.beginPath(); ctx.moveTo(X(p[0]), Y(p[0]));
-    if (p.length === 1) ctx.lineTo(X(p[0]) + 0.1, Y(p[0]));
-    else if (p.length === 2) ctx.lineTo(X(p[1]), Y(p[1]));
-    else {                                                            // smooth: curves through the midpoints
-      for (let i = 1; i < p.length - 1; i++) ctx.quadraticCurveTo(X(p[i]), Y(p[i]), (X(p[i]) + X(p[i + 1])) / 2, (Y(p[i]) + Y(p[i + 1])) / 2);
-      ctx.lineTo(X(p[p.length - 1]), Y(p[p.length - 1]));
-    }
-    ctx.stroke(); ctx.globalAlpha = 1;
-  }
-  function penDraw() {
-    const cv = PEN.cv, ctx = PEN.ctx;
-    if (!cv || !PEN.host || !PEN.host.isConnected) return;
-    const dpr = cv.width / (parseFloat(cv.style.width) || innerWidth);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
-    if (!PEN.strokes.length) return;
-    const r = penHost(), bar = document.getElementById("topbar"), top = Math.max(r.top, bar ? bar.getBoundingClientRect().bottom : 0);
-    ctx.save(); ctx.beginPath(); ctx.rect(r.left - 8, top, r.width + 16, Math.max(0, r.bottom - top)); ctx.clip();
-    PEN.strokes.forEach((st) => { if (st.pts.length) penPath(ctx, st, r); });
-    ctx.restore();
-  }
-  const penQueue = () => { if (!PEN.raf) PEN.raf = requestAnimationFrame(() => { PEN.raf = 0; penDraw(); }); };
-  addEventListener("scroll", () => { if (PEN.strokes.length) penQueue(); }, { passive: true });
-  addEventListener("resize", () => { if (PEN.cv) penSize(); });
-  function penSetup(host, key) {
-    PEN.key = key; PEN.host = host; PEN.strokes = penLoad(key); PEN.cur = null;
-    if (!PEN.cv) {
-      const cv = document.createElement("canvas");
-      cv.className = "pen-layer"; cv.setAttribute("aria-hidden", "true");
-      document.body.appendChild(cv);
-      PEN.cv = cv; PEN.ctx = cv.getContext("2d", { desynchronized: true }) || cv.getContext("2d");
-      const at = (e) => { const r = penHost(); return [+((e.clientX - r.left) / r.width).toFixed(4), +((e.clientY - r.top) / r.width).toFixed(4)]; };
-      cv.addEventListener("pointerdown", (e) => {
-        if (e.pointerType === "pen" && !PEN.seenPen) { PEN.seenPen = true; try { localStorage.setItem("penSeen", "1"); } catch (err) {} }
-        if (e.pointerType === "touch" && (PEN.seenPen || PEN.penDown)) {   // finger (or palm): scroll, never ink
-          if (PEN.penDown) return;
-          PEN.scroll = { id: e.pointerId, y: e.clientY, v: 0, t: e.timeStamp };
-          cv.setPointerCapture(e.pointerId); return;
-        }
-        e.preventDefault();
-        cv.setPointerCapture(e.pointerId);
-        PEN.penDown = e.pointerType === "pen";
-        if (PEN.tool === "erase") { PEN.cur = "erase"; penErase(at(e)); return; }
-        const hl = PEN.tool === "hl";
-        PEN.cur = { c: hl ? "#FFD23F" : PEN.color, w: hl ? 16 : 2.4, a: hl ? 0.4 : 1, pts: [at(e)] };
-        PEN.strokes.push(PEN.cur); penQueue();
-      });
-      cv.addEventListener("pointermove", (e) => {
-        const S = PEN.scroll;
-        if (S && e.pointerId === S.id) {
-          const dy = S.y - e.clientY, dt = Math.max(1, e.timeStamp - S.t);
-          window.scrollBy(0, dy); S.v = 0.8 * (dy / dt) + 0.2 * S.v; S.y = e.clientY; S.t = e.timeStamp; return;
-        }
-        if (!PEN.cur) return;
-        const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-        if (PEN.cur === "erase") { evs.forEach((x) => penErase(at(x))); return; }
-        evs.forEach((x) => PEN.cur.pts.push(at(x)));
-        penQueue();
-      });
-      const end = (e) => {
-        const S = PEN.scroll;
-        if (S && e.pointerId === S.id) {                               // a little glide after a finger flick
-          PEN.scroll = null;
-          let v = S.v * 16;
-          const glide = () => { if (Math.abs(v) < 0.5 || PEN.scroll) return; window.scrollBy(0, v); v *= 0.93; requestAnimationFrame(glide); };
-          if (Math.abs(v) > 2) requestAnimationFrame(glide);
-          return;
-        }
-        if (PEN.cur && PEN.cur !== "erase") { const p = PEN.cur.pts; if (p.length > 2) PEN.cur.pts = p.filter((q, i) => i === 0 || i === p.length - 1 || Math.abs(q[0] - p[i - 1][0]) + Math.abs(q[1] - p[i - 1][1]) > 0.0008); }
-        if (PEN.cur) penSave();
-        PEN.cur = null; PEN.penDown = false; penQueue();
-      };
-      cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
-    }
-    penSize();
-    setTimeout(penDraw, 600);                                         // diagrams and plots settle a moment later
-  }
-  function penErase(pt) {
-    const r = penHost(), rad = 14 / r.width, n = PEN.strokes.length;
-    PEN.strokes = PEN.strokes.filter((st) => !st.pts.some((q) => Math.hypot(q[0] - pt[0], q[1] - pt[1]) < rad));
-    if (PEN.strokes.length !== n) { penSave(); penQueue(); }
+    b._opt = { key, title };
+    document.querySelectorAll("[data-sketch]").forEach((x) => (x._opt = b._opt));
   }
   document.addEventListener("click", (e) => {
-    if (!e.target.closest("[data-pen]")) return;
-    penMode(!document.documentElement.classList.contains("pen-on"));
+    const t = e.target.closest("[data-sketch]");
+    if (t && window.openScratchSheet) openScratchSheet(t._opt || document.querySelector(".fab.sketch-fab")._opt);
   });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.documentElement.classList.contains("pen-on")) penMode(false); });
 
   /* ------------------------------------------------------------- DocPage: sidebar + one section at a time */
   function textOf(blocks) {
@@ -1213,7 +1110,7 @@
       const compactOpts = Object.assign({}, cfg.actionOpts || {}, { compact: 1 });
       main.innerHTML = `
         <div class="crumbs">${esc(cfg.title || "")}${s.group ? " › " + esc(s.group) : ""}</div>
-        <div class="doc-title-row"><h1>${esc(s.title)}</h1><div class="btn-row doc-top-tools">${actionBar(key, compactOpts)}<button type="button" class="btn pen-btn" data-pen title="Write or draw on this page" aria-label="Pen notes">${PEN_SVG}</button></div></div>
+        <div class="doc-title-row"><h1>${esc(s.title)}</h1><div class="btn-row doc-top-tools">${actionBar(key, compactOpts)}<button type="button" class="btn pen-btn" data-sketch title="Sketch on a scratch pad" aria-label="Sketch">${SKETCH_SVG}</button></div></div>
         ${s.sub ? `<p class="lead">${fmt(s.sub)}</p>` : ""}
         <div class="doc-meta">${meta.map((m) => `<span>${esc(m)}</span>`).join("")}</div>
         ${window.BRIEFS && BRIEFS[key] ? `<div class="callout brief"><span class="label">${icon("bulb")} In plain English</span>${String(BRIEFS[key]).split(/\n\s*\n/).map((x) => `<p>${fmt(x.trim())}</p>`).join("")}</div>` : ""}
@@ -1229,7 +1126,7 @@
       if (window.glossify) glossify(main);
       buildToc(main);
       mobileNav(prev, next);
-      penSetup(main, key);
+      sketchFab("lesson:" + kind + ":" + s.id, s.title);
       sidebar();
       document.body.classList.remove("sidebar-open");
       window.scrollTo(0, 0);

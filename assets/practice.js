@@ -378,6 +378,7 @@
   }
   const join = (code, run) => (run ? code.replace(/\s+$/, "") + "\n\n\n" + run : code);
 
+  let padInst = null;
   function detail(id) {
     const i = list.findIndex((p) => p.id === id);
     if (i < 0) { location.hash = ""; return; }
@@ -397,6 +398,8 @@
       ${p.c ? `<p class="small muted"><strong>Constraints:</strong> ${p.c.map(fmt).join(" · ")}</p>` : ""}
       ${p.hint ? `<details class="box"><summary>${icon("bulb")} Hint</summary><div class="body">${paras(p.hint)}</div></details>` : ""}
       ${window.PyUI && p.run ? `<details class="box solve-box" open><summary>${icon("flask")} Try it yourself: write your solution and run the tests</summary><div class="body"><div class="solve"></div></div></details>` : ""}`;
+
+    h += `<details class="box scratch-box" id="scratchBox"><summary>${icon("pencil")} Scratch pad: work it out by hand <span class="small muted">(stylus, finger or mouse)</span></summary><div class="body"><div class="pad-host"></div></div></details>`;
 
     const bRun = typeof p.brute?.run === "string", bNo = p.brute?.run === false;
     if (p.brute) h += `<details class="box"${hide}><summary>${icon("walk")} Approach 1 — ${esc(p.brute.name || "Plain Python loops")}</summary><div class="body">${paras(p.brute.idea)}${p.brute.code ? codeBlock(join(p.brute.code, bNo ? "" : bRun ? p.brute.run : p.run), bNo ? "" : bRun ? p.brute.out : p.out) : ""}${cx(p.brute)}${p.brute.bad ? `<div class="callout warn"><span class="label">Why we vectorize</span>${fmt(p.brute.bad)}</div>` : ""}</div></details>`;
@@ -426,6 +429,14 @@
     Viz.mountAll(main);
     if (window.glossify) glossify(main);
     if (p.h) main.querySelectorAll(".code-wrap").forEach((w) => (w.dataset.pre = p.h));     // examples that need helper code
+    // scratch pad: mounted the first time the box is open (open from the start on touch screens)
+    if (padInst) { padInst.destroy(); padInst = null; }
+    const sb = main.querySelector("#scratchBox");
+    if (sb) {
+      const mount = () => { if (!padInst && sb.open && window.mountScratch) padInst = mountScratch(sb.querySelector(".pad-host"), { key: "ex:" + p.id, height: 380 }); };
+      if (window.isTouch) sb.open = true;
+      sb.addEventListener("toggle", mount); mount();
+    }
     const sv = main.querySelector(".solve");
     if (sv) PyUI.solve(sv, p, () => { const b = main.querySelector(".doc-actions [data-act=done]"); if (b) b.click(); });
     window.scrollTo(0, 0);
